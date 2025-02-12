@@ -1,6 +1,0 @@
-<launch>
-  <arg name="namespace" default="ben"/>
-  <arg name="model" default="$(find ben_description)/urdf/ben_mesh.xacro"/>
-
-  <param name="$(arg namespace)/robot_description" command="$(find xacro)/xacro $(arg model) namespace:=$(arg namespace)"/>
-</launch>
