@@ -14,7 +14,7 @@ def generate_launch_description():
       "namespace", default_value=TextSubstitution(text="ben")
     )
 
-    remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
+    remappings = []#('/tf', 'tf'), ('/tf_static', 'tf_static')]
     
     path_to_urdf = get_package_share_path('ben_description') / 'urdf' / 'ben_mesh.xacro'
     robot_state_publisher_node = Node(
