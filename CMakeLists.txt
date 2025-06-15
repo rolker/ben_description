@@ -13,6 +13,9 @@ file (ARCHIVE_EXTRACT
   DESTINATION share/${PROJECT_NAME}/models/meshes/
 )
 
+install(DIRECTORY ${CMAKE_BINARY_DIR}/share/${PROJECT_NAME}/models DESTINATION share/${PROJECT_NAME})
+
+
 ament_export_dependencies(
   xacro
 )
