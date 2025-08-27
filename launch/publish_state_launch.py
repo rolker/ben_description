@@ -27,7 +27,8 @@ def generate_launch_description():
             Command(['xacro ', str(path_to_urdf)]), value_type=str
            )
        }],
-       remappings=remappings
+       remappings=remappings,
+       emulate_tty=True
     )
 
 
@@ -37,7 +38,8 @@ def generate_launch_description():
         executable='joint_state_publisher',
         name='joint_state_publisher',
         namespace=namespace,
-        remappings=remappings
+        remappings=remappings,
+        emulate_tty=True
     )
 
     return LaunchDescription([
