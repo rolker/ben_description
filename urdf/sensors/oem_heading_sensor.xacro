@@ -2,10 +2,6 @@
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
   <xacro:macro name="oem_heading_sensor" params="name:=heading">
     <link name="${namespace}/${name}">
-      <inertial>
-        <mass value="0.1"/>
-        <inertia ixx="0.000083" ixy="0.0" ixz="0.0" iyy="0.000083" iyz="0.0" izz="0.0125"/>
-      </inertial>
     </link>
     <joint name="${namespace}/${name}_joint" type="revolute">
       <axis xyz="0 0 1"/>
