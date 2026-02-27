@@ -16,6 +16,9 @@ file (ARCHIVE_EXTRACT
 install(DIRECTORY ${CMAKE_BINARY_DIR}/share/${PROJECT_NAME}/models DESTINATION share/${PROJECT_NAME})
 
 
+ament_environment_hooks("hooks/resource_paths.dsv.in")
+ament_environment_hooks("hooks/resource_paths.sh")
+
 ament_export_dependencies(
   xacro
 )
