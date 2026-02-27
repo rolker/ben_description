@@ -4,8 +4,9 @@
   <xacro:macro name="engine" params="prefix position:='0 0 0' orientation:='0 0 0'">
     <link name="${prefix}engine_link">
       <visual>
+        <origin xyz="-0.16 0 -0.24" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://wamv_description/models/engine/mesh/engine.dae"/>
+          <box size="0.2 0.15 0.6"/>
         </geometry>
       </visual>
       <collision name="${prefix}engine_vertical_axis_collision">
@@ -28,8 +29,9 @@
 
     <link name="${prefix}propeller_link">
       <visual>
+        <origin xyz="-0.08 0 0" rpy="0 1.57 0" />
         <geometry>
-          <mesh filename="package://wamv_description/models/propeller/mesh/propeller.dae"/>
+          <cylinder radius="0.1" length="0.05"/>
         </geometry>
       </visual>
       <collision name="${prefix}propeller_collision">
