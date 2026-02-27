@@ -13,6 +13,11 @@ file (ARCHIVE_EXTRACT
   DESTINATION share/${PROJECT_NAME}/models/meshes/
 )
 
+file (ARCHIVE_EXTRACT
+  INPUT ${PROJECT_SOURCE_DIR}/models/meshes/BEN_convex_hull.tar.bz2
+  DESTINATION share/${PROJECT_NAME}/models/meshes/
+)
+
 install(DIRECTORY ${CMAKE_BINARY_DIR}/share/${PROJECT_NAME}/models DESTINATION share/${PROJECT_NAME})
 
 
