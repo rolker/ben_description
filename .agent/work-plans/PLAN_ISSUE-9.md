@@ -12,82 +12,120 @@ causes failures in Gz Harmonic: buoyancy doesn't work because mass/collision liv
 use fake revolute types, and the jetdrive macro is never instantiated. The issue
 proposes a clean restructure that fixes all 8 problems in one coherent change.
 
+### Key design constraint (from maintainer)
+
+`motion_sensor` is **not a legacy artifact** — it is the physical reference frame for
+the POSMV MRU. GPS and heading sensor positions are defined relative to this frame and
+must stay parented to it. In previous Gazebo versions, water level for buoyancy was
+assumed to be at `base_link`, so `base_link` should remain at its current origin
+(waterline reference) with `motion_sensor` as a child at the MRU's physical offset.
+
 ### Current state (verified from source)
 
-- **`ben_mesh.xacro`**: empty `base_link`, all content on `motion_sensor` via fixed joint with buoyancy offset hack
-- **`jetdrive.xacro`**: defines `engine` macro with parent `motion_sensor`, header says "wam-v-two-engines", macro never called
+- **`ben_mesh.xacro`**: empty `base_link` at waterline origin; all content on
+  `motion_sensor` via fixed joint offset `(0.911, 0.018, 0.532)` — the offset combines
+  negative CG coordinates with a 0.35 m buoyancy offset
+- **`jetdrive.xacro`**: defines `engine` macro with parent `motion_sensor`, header
+  says "wam-v-two-engines", macro never called from `ben_mesh.xacro`
 - **`oem_gps.xacro`**: revolute joint with `lower="0.0" upper="0"` (fake fixed)
-- **`oem_heading_sensor.xacro`**: revolute joint (fake fixed), empty link (no visual, no collision, no inertial)
-- **`radar.xacro`**: visual geometry commented out (`<!-- <cylinder ...> -->`)
-- **`pano_camera.xacro`**: separate rotate + translate joints via intermediate `_base` link per camera
+- **`oem_heading_sensor.xacro`**: revolute joint (fake fixed), empty link (no visual,
+  no collision, no inertial)
+- **`radar.xacro`**: visual geometry commented out
+- **`pano_camera.xacro`**: separate rotate + translate joints via intermediate `_base`
+  link per camera
 - **Mesh files**: `BEN_convex_hull.tar.bz2`, `BEN_shell.tar.bz2` (compressed DAE archives)
+- **`display.launch`**: ROS 1 XML launch file — needs porting to ROS 2 Python
 - **Default branch**: `jazzy` (not `main`)
 
-### Downstream references to `motion_sensor` (outside ben_description)
+### Proposed link tree
 
-| File | Repo |
-|------|------|
-| `ben_gazebo/launch/gazebo.launch.py` (4 refs) | ben_gazebo |
-| `ben_gazebo/urdf/sensors/posmv_mru.xacro` | ben_gazebo |
-| `asv_sim/config/ben.yaml` (`mru_frame`) | unh_marine_simulation |
-| `ben_project11/config/operator.rviz` | ben_project11 |
-| `ben_project11/config/ben.rviz` | ben_project11 |
-| `ben_description/rviz/urdf.rviz` | ben_description (this repo) |
+```
+base_link (hull: mass, visual=BEN_shell.dae, collision=low-poly shell)
+├── motion_sensor (fixed, physical POSMV MRU offset — NOT deprecated)
+│   ├── gps (fixed)
+│   └── heading (fixed, with inertial)
+├── lidar (fixed)
+├── radar (fixed, with visible geometry)
+├── pano (fixed, camera enclosure housing)
+│   ├── pano_1 (fixed, single joint)
+│   │   ├── pano_1_optical (fixed)
+│   │   └── pano_1_optical_rviz_mesh (fixed)
+│   ├── pano_2 … pano_6 (same pattern)
+├── forward_camera (fixed)
+│   └── forward_camera_optical (fixed)
+├── mbes (fixed)
+└── engine_link (revolute about Z for steering)
+    └── propeller_link (continuous about X)
+```
+
+GPS and heading stay under `motion_sensor` (POSMV reference frame).
+All other sensors parent to `base_link` (hull-mounted).
 
 ## Approach
 
-### Phase 1: Hull restructure (ben_mesh.xacro + jetdrive.xacro)
+### Phase 1: Hull restructure (ben_mesh.xacro)
 
-1. **Move hull content to `base_link`** — transfer mass (950 kg), visual (`BEN_shell.dae`),
-   and inertial from `motion_sensor` to `base_link`. Remove the buoyancy offset hack.
-   The CG origin stays on `base_link`'s inertial (no offset joint needed).
+1. **Move hull content to `base_link`** — transfer mass (950 kg), visual
+   (`BEN_shell.dae`), inertial, and collision from `motion_sensor` to `base_link`.
+   Keep `base_link` at its current origin (waterline reference for buoyancy).
 
-2. **Replace collision mesh with box primitive** — instead of `BEN_convex_hull.dae`,
-   use a `<box size="4.25 1.7 0.8"/>` approximation matching the hull footprint
-   (from the commented coordinates in `ben_mesh.xacro`). Position the box collision
-   at the CG origin. This is sufficient for buoyancy volume and won't crash ODE.
+2. **Create low-polygon collision mesh** — use a mesh simplification tool (e.g.
+   `meshlab` with quadric edge collapse decimation, or `blender` decimate modifier)
+   to create `BEN_shell_collision.dae` from `BEN_shell.dae` — targeting ~200-500
+   faces, watertight, with normals. This replaces the degenerate 8578-vertex convex
+   hull that crashes ODE.
 
-3. **Add `motion_sensor` as a fixed-joint alias** — to avoid breaking all downstream
-   references at once, keep a `motion_sensor` link as a fixed child of `base_link`
-   with identity transform. This preserves the TF frame while downstream repos
-   migrate. Mark it with an XML comment: `<!-- DEPRECATED: use base_link -->`.
-
-4. **Instantiate jetdrive** — add `<xacro:include>` and `<xacro:engine>` call in
-   `ben_mesh.xacro` at the stern position. Update parent link from `motion_sensor`
-   to `base_link` in `jetdrive.xacro`.
-
-5. **Fix jetdrive header** — change `name="wam-v-two-engines"` to `name="ben_jetdrive"`.
+3. **Simplify `motion_sensor` link** — remove visual/collision/inertial from
+   `motion_sensor` (now on `base_link`), but keep the link and fixed joint at its
+   current offset. `motion_sensor` becomes a lightweight reference frame for POSMV
+   sensors. Add a small inertial (e.g. sensor mass) so it isn't dropped during
+   URDF→SDF conversion.
 
 ### Phase 2: Sensor fixes
 
-6. **`oem_gps.xacro`** — change joint type from `revolute` to `fixed`, remove
-   `<axis>` and `<limit>` elements. Change parent from `motion_sensor` to `base_link`.
+4. **`oem_gps.xacro`** — change joint type from `revolute` to `fixed`, remove
+   `<axis>` and `<limit>` elements. **Keep parent as `motion_sensor`** (GPS is
+   physically relative to the POSMV).
 
-7. **`oem_heading_sensor.xacro`** — same revolute→fixed fix. Add `<inertial>` block
-   (small mass, e.g. 0.5 kg with appropriate inertia). Change parent to `base_link`.
+5. **`oem_heading_sensor.xacro`** — same revolute→fixed fix. Add `<inertial>` block
+   (small mass). **Keep parent as `motion_sensor`**.
 
-8. **`radar.xacro`** — uncomment the visual geometry cylinder. Change parent to `base_link`.
+6. **`radar.xacro`** — uncomment the visual geometry cylinder. Change parent from
+   `motion_sensor` to `base_link` (hull-mounted sensor).
 
-9. **All other sensors** (`lidar.xacro`, `forward_camera.xacro`, `mbes.xacro`,
-   `pano_array.xacro`) — change parent link from `motion_sensor` to `base_link`.
+7. **All other hull-mounted sensors** (`lidar.xacro`, `forward_camera.xacro`,
+   `mbes.xacro`, `pano_array.xacro`) — change parent from `motion_sensor` to
+   `base_link`.
 
 ### Phase 3: Pano camera simplification
 
-10. **`pano_camera.xacro`** — collapse the two-joint chain (rotate `_base` + translate)
-    into a single fixed joint with combined origin. Remove intermediate `_base` link.
-    Keep the `_optical` and `_optical_rviz_mesh` child links unchanged.
+8. **`pano_camera.xacro`** — collapse the two-joint chain (rotate `_base` + translate)
+   into a single fixed joint with combined origin. Remove intermediate `_base` link.
+   Keep `_optical` and `_optical_rviz_mesh` child links unchanged.
 
-### Phase 4: Cleanup and rviz
+### Phase 4: Jetdrive
 
-11. **`rviz/urdf.rviz`** — update `motion_sensor` frame references to `base_link`.
+9. **Instantiate jetdrive** — add `<xacro:include>` and `<xacro:engine>` call in
+   `ben_mesh.xacro` at the stern position. Update parent link from `motion_sensor`
+   to `base_link` in `jetdrive.xacro`.
 
-12. **Remove `BEN_convex_hull` mesh** — delete `models/meshes/BEN_convex_hull.tar.bz2`
-    and remove the corresponding `INSTALL` line from `CMakeLists.txt`.
+10. **Fix jetdrive header** — change `name="wam-v-two-engines"` to
+    `name="ben_jetdrive"`.
 
-13. **`display.launch`** — this is a ROS 1 launch file; leave as-is or remove if
-    no longer needed (ask user).
+### Phase 5: Launch file + cleanup
 
-### Phase 5: Verification
+11. **Port `display.launch` to `display_launch.py`** — ROS 2 Python launch file that
+    starts `robot_state_publisher`, `joint_state_publisher`, and rviz with the
+    existing `rviz/urdf.rviz` config. Remove the old `display.launch`.
+
+12. **`rviz/urdf.rviz`** — no changes needed; `motion_sensor` frame still exists in
+    the tree so existing references remain valid.
+
+13. **Replace `BEN_convex_hull` with low-poly mesh** — delete
+    `models/meshes/BEN_convex_hull.tar.bz2`, add `BEN_shell_collision.dae` (or
+    `.tar.bz2`). Update `CMakeLists.txt` install lines accordingly.
+
+### Phase 6: Verification
 
 14. **xacro parse test** — `xacro ben_mesh.xacro` completes without errors.
 
@@ -97,33 +135,38 @@ proposes a clean restructure that fixes all 8 problems in one coherent change.
 16. **robot_state_publisher smoke test** — `ros2 launch ben_description
     publish_state_launch.py` starts cleanly.
 
-17. **Link tree inspection** — verify the tree matches the proposed design from the issue.
+17. **display_launch.py smoke test** — `ros2 launch ben_description
+    display_launch.py` opens rviz with the model visible.
+
+18. **Link tree inspection** — verify the tree matches the proposed design.
 
 ## Files to Change
 
 | File | Change |
 |------|--------|
-| `urdf/ben_mesh.xacro` | Move hull to base_link, add deprecated motion_sensor alias, instantiate jetdrive |
+| `urdf/ben_mesh.xacro` | Move hull to base_link, simplify motion_sensor to reference frame, instantiate jetdrive |
 | `urdf/jetdrive.xacro` | Fix header, change parent to base_link |
-| `urdf/sensors/oem_gps.xacro` | revolute→fixed, parent→base_link |
-| `urdf/sensors/oem_heading_sensor.xacro` | revolute→fixed, add inertial, parent→base_link |
+| `urdf/sensors/oem_gps.xacro` | revolute→fixed (keep parent=motion_sensor) |
+| `urdf/sensors/oem_heading_sensor.xacro` | revolute→fixed, add inertial (keep parent=motion_sensor) |
 | `urdf/sensors/radar.xacro` | Uncomment visual, parent→base_link |
 | `urdf/sensors/lidar.xacro` | parent→base_link |
 | `urdf/sensors/forward_camera.xacro` | parent→base_link |
 | `urdf/sensors/mbes.xacro` | parent→base_link |
 | `urdf/sensors/pano_array.xacro` | parent→base_link |
 | `urdf/sensors/pano_camera.xacro` | Collapse two-joint chain to single joint, remove _base link |
-| `rviz/urdf.rviz` | Update motion_sensor refs to base_link |
-| `CMakeLists.txt` | Remove BEN_convex_hull install line |
-| `models/meshes/BEN_convex_hull.tar.bz2` | Delete file |
+| `launch/display_launch.py` | New: ROS 2 port of display.launch |
+| `launch/display.launch` | Delete (replaced by display_launch.py) |
+| `CMakeLists.txt` | Update mesh install lines (remove convex hull, add collision mesh) |
+| `models/meshes/BEN_convex_hull.tar.bz2` | Delete |
+| `models/meshes/BEN_shell_collision.dae` | New: low-polygon collision mesh |
 
 ## Principles Self-Check
 
 | Principle | Consideration |
 |---|---|
-| A change includes its consequences | rviz config and CMakeLists updated in same PR. Downstream repos (ben_gazebo, ben_project11, unh_marine_simulation) need separate PRs — mitigated by keeping `motion_sensor` as deprecated alias so nothing breaks immediately. |
-| Improve incrementally | This is a large change, but the 8 problems are structurally entangled (all stem from the motion_sensor indirection). The deprecated alias approach lets downstream repos migrate incrementally. |
-| Test what breaks | xacro parse, check_urdf, and robot_state_publisher smoke test cover the regressions that matter. |
+| A change includes its consequences | rviz config still valid (motion_sensor frame preserved). CMakeLists updated. Launch file ported. Downstream repos unaffected — motion_sensor frame unchanged. |
+| Improve incrementally | Single coherent PR; problems are structurally entangled but the change is well-scoped to one package. |
+| Test what breaks | xacro parse, check_urdf, robot_state_publisher, and rviz display tests cover the regressions that matter. |
 | Only what's needed | Each change maps to a documented problem. No speculative additions. |
 
 ## ADR Compliance
@@ -138,21 +181,26 @@ proposes a clean restructure that fixes all 8 problems in one coherent change.
 
 | If we change... | Also update... | Included in plan? |
 |---|---|---|
-| Remove `motion_sensor` as primary link | ben_gazebo plugins, rviz configs, asv_sim config | Partially — deprecated alias preserves TF frame; downstream PRs tracked in ben_gazebo#5 |
-| Remove `BEN_convex_hull.dae` | CMakeLists.txt install line | Yes |
-| Collapse pano camera joint chain | Any code that references `pano_N_base` frames | Yes — those frames are internal to the URDF, not used externally |
-| Change GPS/heading from revolute to fixed | `joint_state_publisher` will no longer publish states for these joints | Yes — this is the desired behavior (they shouldn't have been revolute) |
+| Move hull content from motion_sensor to base_link | ben_gazebo plugins that target base_link for buoyancy/hydrodynamics | ben_gazebo#5 tracks this; motion_sensor frame is preserved so sensor plugins are unaffected |
+| Replace BEN_convex_hull.dae with low-poly mesh | CMakeLists.txt install lines | Yes |
+| Collapse pano camera joint chain | Any code referencing `pano_N_base` frames | Yes — internal frames, not used externally |
+| Change GPS/heading from revolute to fixed | joint_state_publisher no longer publishes states for these joints | Yes — desired behavior |
+| Port display.launch to display_launch.py | Any scripts referencing the old launch file | Yes — old file removed |
 
 ## Open Questions
 
-1. **`display.launch`** is a ROS 1 XML launch file — should it be removed or kept for reference?
-2. **Box collision dimensions** — `4.25 x 1.7 x 0.8` is estimated from the footprint comments. Should we refine these from CAD data?
-3. **Deprecated `motion_sensor` alias** — how long should it be kept? Should downstream repos be updated in a coordinated batch, or is a deprecation period acceptable?
-4. **Sub-PRs vs single PR** — the review comment recommended splitting (hull → sensors → jetdrive). Given the entanglement, a single PR with well-organized commits may be more practical. Preference?
+1. **Low-poly collision mesh workflow** — do you have a preferred tool for mesh
+   decimation (meshlab, blender, etc.), or should we generate a simple programmatic
+   hull shape (e.g. from the footprint coordinates in the comments)?
+2. **Collision mesh origin** — should the collision mesh origin match `base_link`
+   (waterline), or should it be offset to match the visual mesh origin? The visual
+   `BEN_shell.dae` is currently rendered relative to `motion_sensor`; after moving
+   to `base_link`, the mesh origin may need adjustment.
 
 ## Estimated Scope
 
-Single PR with 4-5 atomic commits (hull restructure, sensor fixes, pano simplification, jetdrive instantiation, cleanup). Could split into sub-PRs if preferred.
+Single PR with atomic commits: hull restructure → sensor fixes → pano simplification
+→ jetdrive → launch port + cleanup.
 
 ---
 **Authored-By**: `Claude Code Agent`
