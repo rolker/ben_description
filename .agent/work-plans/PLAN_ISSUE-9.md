@@ -237,8 +237,10 @@ All other sensors parent to `base_link` (hull-mounted).
    `motion_sensor`; after moving it to `base_link`, the mesh origin may need an
    `<origin>` offset on the visual/collision geometry. Need to inspect the DAE to
    determine where its internal origin sits relative to the hull.
-2. **Heading sensor position** — currently has no xyz offset (defaults to
-   motion_sensor origin). Is that correct, or does it need a survey offset?
+
+## Resolved Questions
+
+- **Heading sensor position** — OK at motion_sensor origin for now (no survey offset needed).
 
 ## Estimated Scope
 
