@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://ros.org/wiki/xacro" name="wam-v-two-engines">
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="ben_jetdrive">
   <!-- Macro for inserting an engine with its propeller. -->
   <xacro:macro name="engine" params="prefix position:='0 0 0' orientation:='0 0 0'">
     <link name="${prefix}engine_link">
@@ -50,7 +50,7 @@
       <axis xyz="0 0 1"/>
       <limit lower="${-pi}" upper="${pi}" effort="10" velocity="10"/>
       <origin xyz="${position}" rpy="${orientation}"/>
-      <parent link="${namespace}/motion_sensor"/>
+      <parent link="${namespace}/base_link"/>
       <child link="${prefix}engine_link"/>
     </joint>
 
