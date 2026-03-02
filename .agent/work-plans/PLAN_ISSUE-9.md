@@ -63,11 +63,54 @@ All other sensors parent to `base_link` (hull-mounted).
 
 ## Approach
 
-### Phase 1: Hull restructure (ben_mesh.xacro)
+### Phase 1: Survey offsets section + hull restructure (ben_mesh.xacro)
 
-1. **Move hull content to `base_link`** — transfer mass (950 kg), visual
-   (`BEN_shell.dae`), inertial, and collision from `motion_sensor` to `base_link`.
-   Keep `base_link` at its current origin (waterline reference for buoyancy).
+0. **Add a survey offsets block** at the top of `ben_mesh.xacro` — a clearly labeled
+   section with named xacro properties for every physical measurement that would
+   change after a resurvey. Each property gets a comment stating what it is, what
+   frame it's relative to, and where the value came from. This makes resurvey updates
+   a one-section edit instead of a scavenger hunt across files.
+
+   ```xml
+   <!-- ============================================================
+        Survey offsets — UPDATE THIS SECTION AFTER RESURVEY
+        All positions in meters.
+        Source: OnShape CAD model / field survey YYYY-MM-DD
+        ============================================================ -->
+
+   <!-- Hull properties (from OnShape) -->
+   <xacro:property name="hull_mass" value="950" />
+   <xacro:property name="cg_x" value="-0.911" />  <!-- CG relative to mesh origin -->
+   ...
+
+   <!-- POSMV MRU location (relative to base_link) -->
+   <xacro:property name="mru_x" value="0.911" />
+   <xacro:property name="mru_y" value="0.018" />
+   <xacro:property name="mru_z" value="0.532" />
+
+   <!-- Sensor positions relative to base_link (hull-mounted) -->
+   <xacro:property name="lidar_x" value="-1.98" />
+   <xacro:property name="lidar_y" value="0.0" />
+   <xacro:property name="lidar_z" value="1.403" />
+   ...
+
+   <!-- Sensor positions relative to motion_sensor (POSMV-mounted) -->
+   <xacro:property name="gps_x" value="-0.953" />
+   <xacro:property name="gps_y" value="0.103" />
+   <xacro:property name="gps_z" value="0.628" />
+   ...
+   ```
+
+   Currently, offsets are scattered: some are inline macro args in `ben_mesh.xacro`,
+   some are defaults buried in individual sensor xacro files (e.g. `mbes.xacro`
+   defaults `z=-1.0`), and `heading` has no position at all (silently at
+   motion_sensor origin). After this change, all survey-dependent values live in
+   one block with the macro calls referencing these properties.
+
+1. **Move hull content to `base_link`** — transfer mass, visual (`BEN_shell.dae`),
+   inertial, and collision from `motion_sensor` to `base_link`. Keep `base_link` at
+   its current origin (waterline reference for buoyancy). Use properties from the
+   survey offsets block for CG and inertia values.
 
 2. **Create low-polygon collision mesh** — use a mesh simplification tool (e.g.
    `meshlab` with quadric edge collapse decimation, or `blender` decimate modifier)
@@ -76,10 +119,10 @@ All other sensors parent to `base_link` (hull-mounted).
    hull that crashes ODE.
 
 3. **Simplify `motion_sensor` link** — remove visual/collision/inertial from
-   `motion_sensor` (now on `base_link`), but keep the link and fixed joint at its
-   current offset. `motion_sensor` becomes a lightweight reference frame for POSMV
-   sensors. Add a small inertial (e.g. sensor mass) so it isn't dropped during
-   URDF→SDF conversion.
+   `motion_sensor` (now on `base_link`), but keep the link and fixed joint using the
+   `mru_x/y/z` survey properties. `motion_sensor` becomes a lightweight reference
+   frame for POSMV sensors. Add a small inertial (e.g. sensor mass) so it isn't
+   dropped during URDF→SDF conversion.
 
 ### Phase 2: Sensor fixes
 
@@ -95,7 +138,8 @@ All other sensors parent to `base_link` (hull-mounted).
 
 7. **All other hull-mounted sensors** (`lidar.xacro`, `forward_camera.xacro`,
    `mbes.xacro`, `pano_array.xacro`) — change parent from `motion_sensor` to
-   `base_link`.
+   `base_link`. Remove default position values from macro definitions; positions
+   come from the survey offsets block in `ben_mesh.xacro` via macro args.
 
 ### Phase 3: Pano camera simplification
 
@@ -144,7 +188,7 @@ All other sensors parent to `base_link` (hull-mounted).
 
 | File | Change |
 |------|--------|
-| `urdf/ben_mesh.xacro` | Move hull to base_link, simplify motion_sensor to reference frame, instantiate jetdrive |
+| `urdf/ben_mesh.xacro` | Add survey offsets block, move hull to base_link, simplify motion_sensor to reference frame, instantiate jetdrive |
 | `urdf/jetdrive.xacro` | Fix header, change parent to base_link |
 | `urdf/sensors/oem_gps.xacro` | revolute→fixed (keep parent=motion_sensor) |
 | `urdf/sensors/oem_heading_sensor.xacro` | revolute→fixed, add inertial (keep parent=motion_sensor) |
@@ -189,13 +233,12 @@ All other sensors parent to `base_link` (hull-mounted).
 
 ## Open Questions
 
-1. **Low-poly collision mesh workflow** — do you have a preferred tool for mesh
-   decimation (meshlab, blender, etc.), or should we generate a simple programmatic
-   hull shape (e.g. from the footprint coordinates in the comments)?
-2. **Collision mesh origin** — should the collision mesh origin match `base_link`
-   (waterline), or should it be offset to match the visual mesh origin? The visual
-   `BEN_shell.dae` is currently rendered relative to `motion_sensor`; after moving
-   to `base_link`, the mesh origin may need adjustment.
+1. **Collision mesh origin** — `BEN_shell.dae` was rendered relative to
+   `motion_sensor`; after moving it to `base_link`, the mesh origin may need an
+   `<origin>` offset on the visual/collision geometry. Need to inspect the DAE to
+   determine where its internal origin sits relative to the hull.
+2. **Heading sensor position** — currently has no xyz offset (defaults to
+   motion_sensor origin). Is that correct, or does it need a survey offset?
 
 ## Estimated Scope
 
