@@ -9,20 +9,20 @@
       <visual name="${name}_visual">
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <cylinder radius="0.3" length="0.25"/>
+          <cylinder radius="0.255" length="0.223"/>
         </geometry>
       </visual>
       <collision name="${name}_collision">
         <geometry>
-          <cylinder radius="0.3" length="0.25"/>
+          <cylinder radius="0.255" length="0.223"/>
         </geometry>
       </collision>
       <inertial>
-        <mass value="1"/>
+        <mass value="5.9"/>
         <inertia
-          ixx="0.00109375"
-          iyy="0.00109375"
-          izz="0.00125"
+          ixx="0.12"
+          iyy="0.12"
+          izz="0.096"
           ixy="0"
           ixz="0"
           iyz="0"/>
