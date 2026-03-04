@@ -6,6 +6,7 @@ find_package(xacro REQUIRED)
 
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY models DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY rviz DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY urdf DESTINATION share/${PROJECT_NAME})
 
 file (ARCHIVE_EXTRACT
@@ -13,10 +14,7 @@ file (ARCHIVE_EXTRACT
   DESTINATION share/${PROJECT_NAME}/models/meshes/
 )
 
-file (ARCHIVE_EXTRACT
-  INPUT ${PROJECT_SOURCE_DIR}/models/meshes/BEN_convex_hull.tar.bz2
-  DESTINATION share/${PROJECT_NAME}/models/meshes/
-)
+# BEN_shell_collision.stl is small enough to install directly (no archive needed)
 
 install(DIRECTORY ${CMAKE_BINARY_DIR}/share/${PROJECT_NAME}/models DESTINATION share/${PROJECT_NAME})
 

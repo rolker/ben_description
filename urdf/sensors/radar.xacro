@@ -9,7 +9,7 @@
       <visual name="${name}_visual">
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <!-- <cylinder radius="0.3" length="0.25"/> -->
+          <cylinder radius="0.3" length="0.25"/>
         </geometry>
       </visual>
       <collision name="${name}_collision">
@@ -29,9 +29,9 @@
       </inertial>
     </link>
 
-    <joint name="${namespace}/motion_sensor_to_${name}_joint" type="fixed">
+    <joint name="${namespace}/base_link_to_${name}_joint" type="fixed">
       <origin xyz="${x} ${y} ${z}" rpy="${R} ${P} ${Y}" />
-      <parent link="${namespace}/motion_sensor" />
+      <parent link="${namespace}/base_link" />
       <child link="${namespace}/${name}" />
     </joint>
   </xacro:macro>

@@ -29,38 +29,31 @@
       </inertial>
     </link>
 
-    <!-- Define a link for the optical frame.  This will match the sensor frame and
-         be oriented in the camera convention. -->
+    <!-- Optical frame oriented in camera convention (ENU -> camera) -->
     <link name="${namespace}/${name}_${number}_optical">
     </link>
 
-    <link name="${namespace}/${name}_${number}_base">
-    </link>
-
-    <!-- rotate -->
-    <joint name="${namespace}/${name}_to_${name}_${number}_base_joint" type="fixed">
-      <origin xyz="0 0 0" rpy="${R} ${P} ${Y}" />
+    <!-- Single joint from pano housing to camera.
+         The old two-joint chain rotated first then translated in the rotated frame.
+         Here we compute the translation in the parent frame:
+           tx = x*cos(Y) - y*sin(Y)
+           ty = x*sin(Y) + y*cos(Y)
+           tz = z
+         (valid when R=P=0, which is the case for all pano cameras) -->
+    <joint name="${namespace}/${name}_to_${name}_${number}_joint" type="fixed">
+      <origin xyz="${x*cos(Y) - y*sin(Y)} ${x*sin(Y) + y*cos(Y)} ${z}" rpy="${R} ${P} ${Y}" />
       <parent link="${namespace}/${name}" />
-      <child link="${namespace}/${name}_${number}_base" />
-    </joint>
-
-    <!-- translate -->
-    <joint name="${namespace}/${name}_${number}_base_to_${name}_${number}_joint" type="fixed">
-      <origin xyz="${x} ${y} ${z}" rpy="0 0 0" />
-      <parent link="${namespace}/${name}_${number}_base" />
       <child link="${namespace}/${name}_${number}" />
     </joint>
 
-    
-    <!-- Camera to optical frame joint.  This is oriented to convert between ENU
-         and camera conventions -->
+    <!-- Camera to optical frame joint -->
     <joint name="${namespace}/${name}_${number}_to_${name}_${number}_optical_joint" type="fixed">
       <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}" />
       <parent link="${namespace}/${name}_${number}" />
       <child link="${namespace}/${name}_${number}_optical" />
     </joint>
-    
-    <!--Move a reference plane away from the camera to project on in rviz-->
+
+    <!-- Reference plane for rviz camera projection -->
     <link name="${namespace}/${name}_${number}_optical_rviz_mesh">
     </link>
 

@@ -40,10 +40,9 @@
     <link name="${namespace}/${name}_optical">
     </link>
 
-    <!-- Sensor post arm to camera joint -->
-    <joint name="${namespace}/motion_sensor_to_${name}_joint" type="fixed">
+    <joint name="${namespace}/base_link_to_${name}_joint" type="fixed">
       <origin xyz="${x} ${y} ${z}" rpy="${R} ${P} ${Y}" />
-      <parent link="${namespace}/motion_sensor" />
+      <parent link="${namespace}/base_link" />
       <child link="${namespace}/${name}" />
     </joint>
 

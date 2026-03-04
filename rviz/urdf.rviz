@@ -1,5 +1,5 @@
 Panels:
-  - Class: rviz/Displays
+  - Class: rviz_common/Displays
     Help Height: 78
     Name: Displays
     Property Tree Widget:
@@ -11,35 +11,30 @@ Panels:
         - /TF1/Tree1
       Splitter Ratio: 0.5
     Tree Height: 1230
-  - Class: rviz/Selection
+  - Class: rviz_common/Selection
     Name: Selection
-  - Class: rviz/Tool Properties
+  - Class: rviz_common/Tool Properties
     Expanded:
-      - /2D Pose Estimate1
-      - /2D Nav Goal1
+      - /2D Goal Pose1
       - /Publish Point1
     Name: Tool Properties
     Splitter Ratio: 0.5886790156364441
-  - Class: rviz/Views
+  - Class: rviz_common/Views
     Expanded:
       - /Current View1
     Name: Views
     Splitter Ratio: 0.5
-  - Class: rviz/Time
+  - Class: rviz_common/Time
     Experimental: false
     Name: Time
     SyncMode: 0
     SyncSource: ""
-Preferences:
-  PromptSaveOnExit: true
-Toolbars:
-  toolButtonStyle: 2
 Visualization Manager:
   Class: ""
   Displays:
     - Alpha: 0.5
       Cell Size: 1
-      Class: rviz/Grid
+      Class: rviz_default_plugins/Grid
       Color: 160; 160; 164
       Enabled: true
       Line Style:
@@ -56,8 +51,16 @@ Visualization Manager:
       Reference Frame: <Fixed Frame>
       Value: true
     - Alpha: 1
-      Class: rviz/RobotModel
+      Class: rviz_default_plugins/RobotModel
       Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /ben/robot_description
       Enabled: true
       Links:
         All Links Enabled: true
@@ -69,6 +72,12 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
+        ben/engine_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         ben/forward_camera:
           Alpha: 1
           Show Axes: false
@@ -92,6 +101,11 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        ben/mbes:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         ben/motion_sensor:
           Alpha: 1
           Show Axes: false
@@ -102,32 +116,11 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        ben/pano_0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        ben/pano_0_base:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        ben/pano_0_optical:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        ben/pano_0_optical_rviz_mesh:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
         ben/pano_1:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        ben/pano_1_base:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
         ben/pano_1_optical:
           Alpha: 1
           Show Axes: false
@@ -141,10 +134,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        ben/pano_2_base:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
         ben/pano_2_optical:
           Alpha: 1
           Show Axes: false
@@ -158,10 +147,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        ben/pano_3_base:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
         ben/pano_3_optical:
           Alpha: 1
           Show Axes: false
@@ -175,10 +160,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        ben/pano_4_base:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
         ben/pano_4_optical:
           Alpha: 1
           Show Axes: false
@@ -192,10 +173,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        ben/pano_5_base:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
         ben/pano_5_optical:
           Alpha: 1
           Show Axes: false
@@ -204,19 +181,45 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+        ben/pano_6:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ben/pano_6_optical:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        ben/pano_6_optical_rviz_mesh:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        ben/propeller_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ben/radar:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
       Name: RobotModel
-      Robot Description: ben/robot_description
       TF Prefix: ""
       Update Interval: 0
       Value: true
       Visual Enabled: true
-    - Class: rviz/TF
+    - Class: rviz_default_plugins/TF
       Enabled: true
+      Filter (blacklist): ""
+      Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
         All Enabled: false
         ben/base_link:
           Value: true
+        ben/engine_link:
+          Value: false
         ben/forward_camera:
           Value: true
         ben/forward_camera_optical:
@@ -227,21 +230,13 @@ Visualization Manager:
           Value: true
         ben/lidar:
           Value: true
+        ben/mbes:
+          Value: true
         ben/motion_sensor:
           Value: true
         ben/pano:
           Value: true
-        ben/pano_0:
-          Value: false
-        ben/pano_0_base:
-          Value: false
-        ben/pano_0_optical:
-          Value: true
-        ben/pano_0_optical_rviz_mesh:
-          Value: false
         ben/pano_1:
-          Value: false
-        ben/pano_1_base:
           Value: false
         ben/pano_1_optical:
           Value: true
@@ -249,15 +244,11 @@ Visualization Manager:
           Value: false
         ben/pano_2:
           Value: false
-        ben/pano_2_base:
-          Value: false
         ben/pano_2_optical:
           Value: true
         ben/pano_2_optical_rviz_mesh:
           Value: false
         ben/pano_3:
-          Value: false
-        ben/pano_3_base:
           Value: false
         ben/pano_3_optical:
           Value: true
@@ -265,21 +256,26 @@ Visualization Manager:
           Value: false
         ben/pano_4:
           Value: false
-        ben/pano_4_base:
-          Value: false
         ben/pano_4_optical:
           Value: true
         ben/pano_4_optical_rviz_mesh:
           Value: false
         ben/pano_5:
           Value: false
-        ben/pano_5_base:
-          Value: false
         ben/pano_5_optical:
           Value: true
         ben/pano_5_optical_rviz_mesh:
           Value: false
-      Marker Alpha: 1
+        ben/pano_6:
+          Value: false
+        ben/pano_6_optical:
+          Value: true
+        ben/pano_6_optical_rviz_mesh:
+          Value: false
+        ben/propeller_link:
+          Value: false
+        ben/radar:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: false
@@ -287,84 +283,102 @@ Visualization Manager:
       Show Names: false
       Tree:
         ben/base_link:
+          ben/engine_link:
+            ben/propeller_link:
+              {}
+          ben/forward_camera:
+            ben/forward_camera_optical:
+              {}
+          ben/lidar:
+            {}
+          ben/mbes:
+            {}
           ben/motion_sensor:
-            ben/forward_camera:
-              ben/forward_camera_optical:
-                {}
             ben/gps:
               {}
             ben/heading:
               {}
-            ben/lidar:
-              {}
-            ben/pano:
-              ben/pano_0_base:
-                ben/pano_0:
-                  ben/pano_0_optical:
-                    ben/pano_0_optical_rviz_mesh:
-                      {}
-              ben/pano_1_base:
-                ben/pano_1:
-                  ben/pano_1_optical:
-                    ben/pano_1_optical_rviz_mesh:
-                      {}
-              ben/pano_2_base:
-                ben/pano_2:
-                  ben/pano_2_optical:
-                    ben/pano_2_optical_rviz_mesh:
-                      {}
-              ben/pano_3_base:
-                ben/pano_3:
-                  ben/pano_3_optical:
-                    ben/pano_3_optical_rviz_mesh:
-                      {}
-              ben/pano_4_base:
-                ben/pano_4:
-                  ben/pano_4_optical:
-                    ben/pano_4_optical_rviz_mesh:
-                      {}
-              ben/pano_5_base:
-                ben/pano_5:
-                  ben/pano_5_optical:
-                    ben/pano_5_optical_rviz_mesh:
-                      {}
+          ben/pano:
+            ben/pano_1:
+              ben/pano_1_optical:
+                ben/pano_1_optical_rviz_mesh:
+                  {}
+            ben/pano_2:
+              ben/pano_2_optical:
+                ben/pano_2_optical_rviz_mesh:
+                  {}
+            ben/pano_3:
+              ben/pano_3_optical:
+                ben/pano_3_optical_rviz_mesh:
+                  {}
+            ben/pano_4:
+              ben/pano_4_optical:
+                ben/pano_4_optical_rviz_mesh:
+                  {}
+            ben/pano_5:
+              ben/pano_5_optical:
+                ben/pano_5_optical_rviz_mesh:
+                  {}
+            ben/pano_6:
+              ben/pano_6_optical:
+                ben/pano_6_optical_rviz_mesh:
+                  {}
+          ben/radar:
+            {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Default Light: true
     Fixed Frame: ben/base_link
     Frame Rate: 30
   Name: root
   Tools:
-    - Class: rviz/Interact
+    - Class: rviz_default_plugins/Interact
       Hide Inactive Objects: true
-    - Class: rviz/MoveCamera
-    - Class: rviz/Select
-    - Class: rviz/FocusCamera
-    - Class: rviz/Measure
-    - Class: rviz/SetInitialPose
-      Theta std deviation: 0.2617993950843811
-      Topic: /initialpose
-      X std deviation: 0.5
-      Y std deviation: 0.5
-    - Class: rviz/SetGoal
-      Topic: /move_base_simple/goal
-    - Class: rviz/PublishPoint
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
+    - Class: rviz_default_plugins/SetInitialPose
+      Covariance x: 0.25
+      Covariance y: 0.25
+      Covariance yaw: 0.06853891909122467
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /initialpose
+    - Class: rviz_default_plugins/SetGoal
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /goal_pose
+    - Class: rviz_default_plugins/PublishPoint
       Single click: true
-      Topic: /clicked_point
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /clicked_point
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
   Value: true
   Views:
     Current:
-      Class: rviz/Orbit
+      Class: rviz_default_plugins/Orbit
       Distance: 6.258892059326172
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Field of View: 0.7853981852531433
       Focal Point:
         X: 0.6710822582244873
         Y: -0.021799802780151367
@@ -376,6 +390,7 @@ Visualization Manager:
       Near Clip Distance: 0.009999999776482582
       Pitch: 0.3392924964427948
       Target Frame: <Fixed Frame>
+      Value: Orbit (rviz)
       Yaw: 5.214824676513672
     Saved: ~
 Window Geometry:

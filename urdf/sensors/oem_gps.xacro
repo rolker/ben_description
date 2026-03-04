@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
   <xacro:macro name="oem_gps" params="name:=gps x:=0 y:=0 z:=0 R:=0 P:=0 Y:=0">
-    
+
     <link name="${namespace}/${name}">
       <visual name="${name}_visual">
         <origin xyz="0.001 0 -0.01" rpy="${radians(90)} 0 ${radians(90)}"/>
@@ -15,22 +15,18 @@
           <cylinder radius="0.046" length="0.05"/>
         </geometry>
       </collision>
-      
+
       <inertial>
         <mass value="1"/>
         <inertia ixx="0.006458" ixy="0.0" ixz="0.0" iyy="0.006458" iyz="0.0" izz="0.01125"/>
       </inertial>
     </link>
-    
-    <joint name="${namespace}/${name}_joint" type="revolute">
-      <axis xyz="0 0 1"/>
-      <limit effort="1000.0" lower="0.0" upper="0" velocity="0"/>
+
+    <joint name="${namespace}/${name}_joint" type="fixed">
       <parent link="${namespace}/motion_sensor" />
       <child link="${namespace}/${name}" />
       <origin xyz="${x} ${y} ${z}" rpy="${R} ${P} ${Y}" />
     </joint>
-    
+
   </xacro:macro>
 </robot>
-
-

@@ -3,89 +3,157 @@
   <xacro:arg name="namespace" default="ben"/>
   <xacro:property name="namespace" value="$(arg namespace)" scope="global" />
 
-  <xacro:property name="mass" value="950" />
-  
+  <!-- ============================================================
+       Survey offsets — UPDATE THIS SECTION AFTER RESURVEY
+       All positions in meters.
+       Source: OnShape CAD model
+       ============================================================ -->
+
+  <!-- Hull mass properties (from OnShape) -->
+  <xacro:property name="hull_mass" value="950" />
   <xacro:property name="cg_x" value="-0.911" />
   <xacro:property name="cg_y" value="-0.018" />
   <xacro:property name="cg_z" value="-0.182" />
-  
   <xacro:property name="ixx" value="280.97548467" />
   <xacro:property name="ixy" value="-9.237803" />
   <xacro:property name="ixz" value="-2.02566202" />
   <xacro:property name="iyy" value="866.01489076" />
   <xacro:property name="iyz" value="-0.43969229" />
   <xacro:property name="izz" value="793.7913527" />
-  
-  <xacro:property name="buoyancy_offset" value=".35" />
-  
-  <link name="${namespace}/base_link">
-  </link>
-  
-  <joint name="${namespace}_base_to_motion_sensor_joint" type="fixed">
-      <parent link="${namespace}/base_link"/>
-      <child link="${namespace}/motion_sensor"/>
-      <origin xyz="${- cg_x} ${- cg_y} ${buoyancy_offset - cg_z}" rpy="0 0 0"/>
-  </joint>
-  
-  <link name="${namespace}/motion_sensor">
-    <visual>
-        <geometry>
-            <mesh filename="package://ben_description/models/meshes/BEN_shell.dae"/>
-        </geometry>
-    </visual>
-    
-    <!-- footprint 2.65, 0
-                    2.6,  0.1
-                    2.4,  0.4
-                    1.9,  0.6
-                    1.0,  0.85
-                    -1.3, 0.85
-                    -1.35, 0.4
-                    -1.6, 0.35
-                    (repeat symetrically for other side)
-                    (Meters relative to base frame)
 
-                     -->
+  <!-- POSMV MRU location relative to base_link.
+       The visual/collision meshes were authored with their origin at this point,
+       so the mesh geometry <origin> uses the same offset. -->
+  <xacro:property name="mru_x" value="0.911" />
+  <xacro:property name="mru_y" value="0.018" />
+  <xacro:property name="mru_z" value="0.532" />
+
+  <!-- Sensor positions, measured relative to the POSMV MRU reference point.
+       Hull-mounted sensors are parented to base_link in the URDF, so their
+       joint origins add the MRU offset (e.g. x="${mru_x + lidar_x}").
+       POSMV-mounted sensors (gps, heading) are parented to motion_sensor
+       and use these offsets directly. -->
+
+  <!-- Lidar (hull-mounted, relative to MRU) -->
+  <xacro:property name="lidar_x" value="-1.98" />
+  <xacro:property name="lidar_y" value="0.0" />
+  <xacro:property name="lidar_z" value="1.403" />
+
+  <!-- Radar (hull-mounted, relative to MRU) -->
+  <xacro:property name="radar_x" value="-1.8" />
+  <xacro:property name="radar_y" value="0.0" />
+  <xacro:property name="radar_z" value="1.3" />
+
+  <!-- Panoramic camera array (hull-mounted, relative to MRU) -->
+  <xacro:property name="pano_x" value="-1.98" />
+  <xacro:property name="pano_y" value="0.0" />
+  <xacro:property name="pano_z" value="1.266" />
+
+  <!-- Forward camera (hull-mounted, relative to MRU) -->
+  <xacro:property name="forward_camera_x" value="-1.307" />
+  <xacro:property name="forward_camera_y" value="0.1" />
+  <xacro:property name="forward_camera_z" value="0.742" />
+
+  <!-- MBES (hull-mounted, relative to MRU) -->
+  <xacro:property name="mbes_x" value="0.0" />
+  <xacro:property name="mbes_y" value="0.0" />
+  <xacro:property name="mbes_z" value="-1.0" />
+
+  <!-- GPS (POSMV-mounted, relative to motion_sensor) -->
+  <xacro:property name="gps_x" value="-0.953" />
+  <xacro:property name="gps_y" value="0.103" />
+  <xacro:property name="gps_z" value="0.628" />
+
+  <!-- Heading sensor at motion_sensor origin (no offset) -->
+
+  <!-- Jetdrive engine (hull-mounted, relative to MRU) -->
+  <xacro:property name="engine_x" value="-1.6" />
+  <xacro:property name="engine_y" value="0.0" />
+  <xacro:property name="engine_z" value="-0.35" />
+
+  <!-- ============================================================
+       End of survey offsets
+       ============================================================ -->
+
+  <!-- base_link: hull frame at waterline reference.
+       All hull-mounted sensors and the visual/collision mesh attach here. -->
+  <link name="${namespace}/base_link">
+    <visual>
+      <!-- Mesh origin is at the POSMV MRU location -->
+      <origin xyz="${mru_x} ${mru_y} ${mru_z}" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://ben_description/models/meshes/BEN_shell.dae"/>
+      </geometry>
+    </visual>
+
     <collision>
-        <geometry>
-            <mesh filename="package://ben_description/models/meshes/BEN_convex_hull.dae"/>
-        </geometry>
+      <origin xyz="${mru_x} ${mru_y} ${mru_z}" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://ben_description/models/meshes/BEN_shell_collision.stl"/>
+      </geometry>
     </collision>
-    
+
     <inertial>
-        <!--Values obtained from OnShape-->
-        <origin xyz="${cg_x} ${cg_y} ${cg_z}" rpy="0 0 0"/>
-        <mass value="${mass}"/>
-        <inertia
-            ixx="${ixx}" ixy="${ixy}" ixz="${ixz}"
-            iyy="${iyy}" iyz="${iyz}"
-            izz="${izz}"/>
+      <!-- CG in base_link frame = MRU offset + CG relative to MRU -->
+      <origin xyz="${mru_x + cg_x} ${mru_y + cg_y} ${mru_z + cg_z}" rpy="0 0 0"/>
+      <mass value="${hull_mass}"/>
+      <inertia
+        ixx="${ixx}" ixy="${ixy}" ixz="${ixz}"
+        iyy="${iyy}" iyz="${iyz}"
+        izz="${izz}"/>
     </inertial>
-    
   </link>
+
+  <!-- motion_sensor: POSMV MRU physical reference frame.
+       GPS and heading sensor are parented here. -->
+  <joint name="${namespace}/base_link_to_motion_sensor_joint" type="fixed">
+    <parent link="${namespace}/base_link"/>
+    <child link="${namespace}/motion_sensor"/>
+    <origin xyz="${mru_x} ${mru_y} ${mru_z}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="${namespace}/motion_sensor">
+    <inertial>
+      <mass value="5.0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <!-- Hull-mounted sensors (positions converted from MRU-relative to base_link-relative) -->
 
   <xacro:include filename="$(find ben_description)/urdf/sensors/lidar.xacro" />
-  <xacro:ben_lidar name="lidar" x="-1.98" y="0.0" z="1.403"/>
+  <xacro:ben_lidar name="lidar"
+    x="${mru_x + lidar_x}" y="${mru_y + lidar_y}" z="${mru_z + lidar_z}"/>
 
   <xacro:include filename="$(find ben_description)/urdf/sensors/radar.xacro" />
-  <xacro:ben_radar name="radar" x="-1.8" y="0.0" z="1.3"/>
+  <xacro:ben_radar name="radar"
+    x="${mru_x + radar_x}" y="${mru_y + radar_y}" z="${mru_z + radar_z}"/>
 
   <xacro:include filename="$(find ben_description)/urdf/sensors/pano_array.xacro" />
-  <xacro:pano_array name="pano" x="-1.98" z="1.266"/>
-  <!-- HACK moved pano array up so light is not in field of view -->
-  <!-- <xacro:pano_array name="pano" x="-1.98" z="1.366"/>   -->
+  <xacro:pano_array name="pano"
+    x="${mru_x + pano_x}" y="${mru_y + pano_y}" z="${mru_z + pano_z}"/>
+
+  <xacro:include filename="$(find ben_description)/urdf/sensors/forward_camera.xacro" />
+  <xacro:forward_camera name="forward_camera"
+    x="${mru_x + forward_camera_x}" y="${mru_y + forward_camera_y}" z="${mru_z + forward_camera_z}"/>
+
+  <xacro:include filename="$(find ben_description)/urdf/sensors/mbes.xacro" />
+  <xacro:ben_mbes name="mbes"
+    x="${mru_x + mbes_x}" y="${mru_y + mbes_y}" z="${mru_z + mbes_z}"
+    R="${radians(180)}"/>
+
+  <!-- POSMV-mounted sensors (positions relative to motion_sensor) -->
 
   <xacro:include filename="$(find ben_description)/urdf/sensors/oem_gps.xacro" />
-  <xacro:oem_gps name="gps" x="-0.953" y="0.103" z="0.628"/>
+  <xacro:oem_gps name="gps" x="${gps_x}" y="${gps_y}" z="${gps_z}"/>
 
   <xacro:include filename="$(find ben_description)/urdf/sensors/oem_heading_sensor.xacro" />
   <xacro:oem_heading_sensor name="heading"/>
-  
-  <xacro:include filename="$(find ben_description)/urdf/sensors/forward_camera.xacro" />
-  <xacro:forward_camera name="forward_camera" y="0.1" x="-1.307" z="0.742" P="${radians(0)}" />
 
-  <xacro:include filename="$(find ben_description)/urdf/sensors/mbes.xacro" />
-  <xacro:ben_mbes name="mbes" />
+  <!-- Jetdrive -->
 
-  
+  <xacro:include filename="$(find ben_description)/urdf/jetdrive.xacro" />
+  <xacro:engine prefix="${namespace}/"
+    position="${mru_x + engine_x} ${mru_y + engine_y} ${mru_z + engine_z}"/>
+
 </robot>
