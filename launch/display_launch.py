@@ -26,7 +26,8 @@ def generate_launch_description():
         namespace=namespace,
         parameters=[{
             'robot_description': ParameterValue(
-                Command(['xacro ', str(path_to_urdf)]), value_type=str
+                Command(['xacro ', str(path_to_urdf),
+                         ' namespace:=', namespace]), value_type=str
             )
         }],
         emulate_tty=True,
