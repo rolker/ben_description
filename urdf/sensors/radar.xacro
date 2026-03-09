@@ -5,18 +5,8 @@
                                         x:=0.7 y:=0 z:=1.5
                                         R:=0 P:=0 Y:=0">
 
+    <!-- TF frame only — hull mesh already includes radar dome visual. -->
     <link name="${namespace}/${name}">
-      <visual name="${name}_visual">
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>
-          <cylinder radius="0.255" length="0.223"/>
-        </geometry>
-      </visual>
-      <collision name="${name}_collision">
-        <geometry>
-          <cylinder radius="0.255" length="0.223"/>
-        </geometry>
-      </collision>
       <inertial>
         <mass value="0.01"/>
         <inertia
