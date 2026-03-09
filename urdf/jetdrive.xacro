@@ -52,6 +52,8 @@
       <parent link="${namespace}/${name}_deflector"/>
       <child link="${namespace}/${name}_impeller"/>
       <axis xyz="1 0 0"/>
+      <limit effort="100" velocity="100"/>
+      <dynamics friction="0.05" damping="0.05"/>
     </joint>
 
   </xacro:macro>
