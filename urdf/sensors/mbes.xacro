@@ -1,38 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <xacro:macro name="ben_mbes" params="name
-                                        x:=0.0 y:=0.0 z:=-1.0
-                                        R:=3.14 P:=0 Y:=0">
+  <!-- Kongsberg EM 2040P MBES on retractable ram.
+       Travel = max_draft(630mm) - hull_draft(404mm) = 226mm downward.
+       No visual/collision — hull mesh includes the ram housing. -->
+  <xacro:macro name="ben_mbes" params="name x:=0 y:=0 z:=0">
 
-    <link name="${namespace}/${name}">
-      <visual name="${name}_visual">
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>
-          <cylinder radius="0.3" length="0.25"/>
-        </geometry>
-      </visual>
-      <collision name="${name}_collision">
-        <geometry>
-          <cylinder radius="0.3" length="0.25"/>
-        </geometry>
-      </collision>
+    <!-- Ram — prismatic joint for vertical travel (0 to -0.226 m) -->
+    <link name="${namespace}/${name}_ram">
       <inertial>
         <mass value="0.01"/>
-        <inertia
-          ixx="0.0001"
-          iyy="0.0001"
-          izz="0.0001"
-          ixy="0"
-          ixz="0"
-          iyz="0"/>
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0"
+                 iyy="0.0001" iyz="0.0" izz="0.0001"/>
       </inertial>
     </link>
 
-    <joint name="${namespace}/base_link_to_${name}_joint" type="fixed">
-      <origin xyz="${x} ${y} ${z}" rpy="${R} ${P} ${Y}" />
-      <parent link="${namespace}/base_link" />
-      <child link="${namespace}/${name}" />
+    <joint name="${namespace}/${name}_ram_joint" type="prismatic">
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 0"/>
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/${name}_ram"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-0.226" upper="0.0" effort="100" velocity="0.05"/>
     </joint>
+
+    <!-- MBES transducer — TF frame only (like radar) -->
+    <link name="${namespace}/${name}">
+      <inertial>
+        <mass value="0.01"/>
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0"
+                 iyy="0.0001" iyz="0.0" izz="0.0001"/>
+      </inertial>
+    </link>
+
+    <joint name="${namespace}/${name}_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="${radians(180)} 0 0"/>
+      <parent link="${namespace}/${name}_ram"/>
+      <child link="${namespace}/${name}"/>
+    </joint>
+
   </xacro:macro>
 </robot>

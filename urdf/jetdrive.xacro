@@ -1,52 +1,58 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://ros.org/wiki/xacro" name="ben_jetdrive">
-  <!-- Macro for inserting an engine with its propeller. -->
-  <xacro:macro name="engine" params="prefix position:='0 0 0' orientation:='0 0 0'">
-    <link name="${prefix}engine_link">
-      <visual>
-        <origin xyz="-0.16 0 -0.24" rpy="0 0 0" />
-        <geometry>
-          <box size="0.2 0.15 0.6"/>
-        </geometry>
-      </visual>
-      <!-- No collision — engine is internal (Alamarin-Jet AJ 160 waterjet).
-           Collision geometries inside the hull mesh cause physics issues
-           when fixed joints are merged during URDF-to-SDF conversion. -->
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- Alamarin-Jet AJ 160 waterjet model.
+       Internal waterjet with deflector/bucket for steering and reverse.
+       No visual/collision — the jet is inside the hull. -->
+  <xacro:macro name="ben_jetdrive" params="name x:=0 y:=0 z:=0">
+
+    <!-- Mount point (fixed to hull, no visual/collision) -->
+    <link name="${namespace}/${name}_mount">
       <inertial>
         <mass value="0.01"/>
-        <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0"
+                 iyy="0.0001" iyz="0.0" izz="0.0001"/>
       </inertial>
     </link>
 
-    <link name="${prefix}propeller_link">
-      <visual>
-        <origin xyz="-0.08 0 0" rpy="0 1.57 0" />
-        <geometry>
-          <cylinder radius="0.1" length="0.05"/>
-        </geometry>
-      </visual>
-      <!-- No collision — internal waterjet impeller -->
-      <inertial>
-        <mass value="0.01"/>
-        <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
-      </inertial>
-    </link>
-
-    <!-- Both joints fixed: BEN uses an Alamarin-Jet AJ 160 waterjet,
-         not a steerable outboard. The revolute/continuous joints were
-         placeholders from the ROS 2 port. Fixing them until a proper
-         waterjet model is implemented. -->
-    <joint name="${prefix}chasis_engine_joint" type="fixed">
-      <origin xyz="${position}" rpy="${orientation}"/>
+    <joint name="${namespace}/${name}_mount_joint" type="fixed">
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 0"/>
       <parent link="${namespace}/base_link"/>
-      <child link="${prefix}engine_link"/>
+      <child link="${namespace}/${name}_mount"/>
     </joint>
 
-    <joint name="${prefix}engine_propeller_joint" type="fixed">
-      <parent link="${prefix}engine_link"/>
-      <child link="${prefix}propeller_link"/>
-      <origin rpy="0 0 0" xyz="-0.278156 0 -0.509371"/>
+    <!-- Deflector/bucket — redirects jet for steering (yaw ±30°) -->
+    <link name="${namespace}/${name}_deflector">
+      <inertial>
+        <mass value="0.01"/>
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0"
+                 iyy="0.0001" iyz="0.0" izz="0.0001"/>
+      </inertial>
+    </link>
+
+    <joint name="${namespace}/${name}_deflector_joint" type="revolute">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${namespace}/${name}_mount"/>
+      <child link="${namespace}/${name}_deflector"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-0.524" upper="0.524" effort="100" velocity="1.0"/>
     </joint>
+
+    <!-- Impeller — spins to generate thrust force -->
+    <link name="${namespace}/${name}_impeller">
+      <inertial>
+        <mass value="0.01"/>
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0"
+                 iyy="0.0001" iyz="0.0" izz="0.0001"/>
+      </inertial>
+    </link>
+
+    <joint name="${namespace}/${name}_impeller_joint" type="continuous">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${namespace}/${name}_deflector"/>
+      <child link="${namespace}/${name}_impeller"/>
+      <axis xyz="1 0 0"/>
+    </joint>
+
   </xacro:macro>
 </robot>
-

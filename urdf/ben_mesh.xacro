@@ -61,10 +61,10 @@
   <xacro:property name="forward_camera_y" value="0.1" />
   <xacro:property name="forward_camera_z" value="0.742" />
 
-  <!-- MBES (hull-mounted, relative to MRU) -->
-  <xacro:property name="mbes_x" value="0.0" />
+  <!-- MBES (hull-mounted, on retractable ram, relative to MRU) -->
+  <xacro:property name="mbes_x" value="-0.5" />
   <xacro:property name="mbes_y" value="0.0" />
-  <xacro:property name="mbes_z" value="-1.0" />
+  <xacro:property name="mbes_z" value="-0.4" />
 
   <!-- GPS (POSMV-mounted, relative to motion_sensor) -->
   <xacro:property name="gps_x" value="-0.953" />
@@ -73,10 +73,10 @@
 
   <!-- Heading sensor at motion_sensor origin (no offset) -->
 
-  <!-- Jetdrive engine (hull-mounted, relative to MRU) -->
-  <xacro:property name="engine_x" value="-1.6" />
-  <xacro:property name="engine_y" value="0.0" />
-  <xacro:property name="engine_z" value="-0.35" />
+  <!-- Jetdrive (stern, hull-mounted, relative to MRU) -->
+  <xacro:property name="jetdrive_x" value="-1.1" />
+  <xacro:property name="jetdrive_y" value="0.0" />
+  <xacro:property name="jetdrive_z" value="-0.1" />
 
   <!-- ============================================================
        End of survey offsets
@@ -148,8 +148,7 @@
 
   <xacro:include filename="$(find ben_description)/urdf/sensors/mbes.xacro" />
   <xacro:ben_mbes name="mbes"
-    x="${mru_x + mbes_x}" y="${mru_y + mbes_y}" z="${mru_z + mbes_z}"
-    R="${radians(180)}"/>
+    x="${mru_x + mbes_x}" y="${mru_y + mbes_y}" z="${mru_z + mbes_z}"/>
 
   <!-- POSMV-mounted sensors (positions relative to motion_sensor) -->
 
@@ -159,10 +158,10 @@
   <xacro:include filename="$(find ben_description)/urdf/sensors/oem_heading_sensor.xacro" />
   <xacro:oem_heading_sensor name="heading"/>
 
-  <!-- Jetdrive -->
+  <!-- Jetdrive (Alamarin-Jet AJ 160 waterjet) -->
 
   <xacro:include filename="$(find ben_description)/urdf/jetdrive.xacro" />
-  <xacro:engine prefix="${namespace}/"
-    position="${mru_x + engine_x} ${mru_y + engine_y} ${mru_z + engine_z}"/>
+  <xacro:ben_jetdrive name="jetdrive"
+    x="${mru_x + jetdrive_x}" y="${mru_y + jetdrive_y}" z="${mru_z + jetdrive_z}"/>
 
 </robot>
