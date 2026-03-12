@@ -35,7 +35,7 @@
       <parent link="${namespace}/${name}_mount"/>
       <child link="${namespace}/${name}_deflector"/>
       <axis xyz="0 0 1"/>
-      <limit lower="-0.524" upper="0.524" effort="100" velocity="1.0"/>
+      <limit lower="${-radians(30)}" upper="${radians(30)}" effort="100" velocity="1.0"/>
     </joint>
 
     <!-- Impeller — spins to generate thrust force -->
