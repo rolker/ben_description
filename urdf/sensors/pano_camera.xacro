@@ -16,7 +16,7 @@
           <cylinder radius="0.015" length="0.042"/>
         </geometry>
       </collision>
-      <!-- Model inertia as box with <size>0.078 0.03 0.03</size> -->
+      <!-- Near-zero inertia: sensor mass is accounted for in hull_mass -->
       <inertial>
         <mass value="0.01"/>
         <inertia
