@@ -73,11 +73,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        ben/engine_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         ben/forward_camera:
           Alpha: 1
           Show Axes: false
@@ -96,12 +91,32 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+        ben/jetdrive_deflector:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ben/jetdrive_impeller:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ben/jetdrive_mount:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         ben/lidar:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
         ben/mbes:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ben/mbes_ram:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -194,11 +209,6 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        ben/propeller_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         ben/radar:
           Alpha: 1
           Show Axes: false
@@ -218,8 +228,6 @@ Visualization Manager:
         All Enabled: false
         ben/base_link:
           Value: true
-        ben/engine_link:
-          Value: false
         ben/forward_camera:
           Value: true
         ben/forward_camera_optical:
@@ -228,10 +236,18 @@ Visualization Manager:
           Value: true
         ben/heading:
           Value: true
+        ben/jetdrive_deflector:
+          Value: false
+        ben/jetdrive_impeller:
+          Value: false
+        ben/jetdrive_mount:
+          Value: false
         ben/lidar:
           Value: true
         ben/mbes:
           Value: true
+        ben/mbes_ram:
+          Value: false
         ben/motion_sensor:
           Value: true
         ben/pano:
@@ -272,8 +288,6 @@ Visualization Manager:
           Value: true
         ben/pano_6_optical_rviz_mesh:
           Value: false
-        ben/propeller_link:
-          Value: false
         ben/radar:
           Value: true
       Marker Scale: 1
@@ -283,16 +297,18 @@ Visualization Manager:
       Show Names: false
       Tree:
         ben/base_link:
-          ben/engine_link:
-            ben/propeller_link:
-              {}
           ben/forward_camera:
             ben/forward_camera_optical:
               {}
+          ben/jetdrive_mount:
+            ben/jetdrive_deflector:
+              ben/jetdrive_impeller:
+                {}
           ben/lidar:
             {}
-          ben/mbes:
-            {}
+          ben/mbes_ram:
+            ben/mbes:
+              {}
           ben/motion_sensor:
             ben/gps:
               {}

@@ -9,17 +9,24 @@
        Source: OnShape CAD model
        ============================================================ -->
 
-  <!-- Hull mass properties (from OnShape) -->
-  <xacro:property name="hull_mass" value="950" />
+  <!-- Hull mass properties.
+       GA drawing (ASV-396-7-000-i0001-01): 883 kg displacement, 0.40m draft.
+       CG lowered from OnShape estimate to ~60% of draft above keel for
+       typical monohull stability. In base_link frame CG_z = 0.186. -->
+  <xacro:property name="hull_mass" value="883" />
   <xacro:property name="cg_x" value="-0.911" />
   <xacro:property name="cg_y" value="-0.018" />
-  <xacro:property name="cg_z" value="-0.182" />
-  <xacro:property name="ixx" value="280.97548467" />
-  <xacro:property name="ixy" value="-9.237803" />
-  <xacro:property name="ixz" value="-2.02566202" />
-  <xacro:property name="iyy" value="866.01489076" />
-  <xacro:property name="iyz" value="-0.43969229" />
-  <xacro:property name="izz" value="793.7913527" />
+  <xacro:property name="cg_z" value="-0.346" />
+  <!-- Inertia estimated as uniform-density box from GA drawing dimensions
+       (4.17m x 1.58m x 0.63m at 883 kg). OnShape CAD values were unreliable
+       and off-diagonal products caused capsizing when amplified by sensor-mass
+       merging during URDF-to-SDF fixed joint conversion. -->
+  <xacro:property name="ixx" value="212.9" />
+  <xacro:property name="ixy" value="0.0" />
+  <xacro:property name="ixz" value="0.0" />
+  <xacro:property name="iyy" value="1308.7" />
+  <xacro:property name="iyz" value="0.0" />
+  <xacro:property name="izz" value="1463.2" />
 
   <!-- POSMV MRU location relative to base_link.
        The visual/collision meshes were authored with their origin at this point,
@@ -54,10 +61,10 @@
   <xacro:property name="forward_camera_y" value="0.1" />
   <xacro:property name="forward_camera_z" value="0.742" />
 
-  <!-- MBES (hull-mounted, relative to MRU) -->
-  <xacro:property name="mbes_x" value="0.0" />
+  <!-- MBES (hull-mounted, on retractable ram, relative to MRU) -->
+  <xacro:property name="mbes_x" value="-0.5" />
   <xacro:property name="mbes_y" value="0.0" />
-  <xacro:property name="mbes_z" value="-1.0" />
+  <xacro:property name="mbes_z" value="-0.4" />
 
   <!-- GPS (POSMV-mounted, relative to motion_sensor) -->
   <xacro:property name="gps_x" value="-0.953" />
@@ -66,10 +73,10 @@
 
   <!-- Heading sensor at motion_sensor origin (no offset) -->
 
-  <!-- Jetdrive engine (hull-mounted, relative to MRU) -->
-  <xacro:property name="engine_x" value="-1.6" />
-  <xacro:property name="engine_y" value="0.0" />
-  <xacro:property name="engine_z" value="-0.35" />
+  <!-- Jetdrive (stern, hull-mounted, relative to MRU) -->
+  <xacro:property name="jetdrive_x" value="-1.1" />
+  <xacro:property name="jetdrive_y" value="0.0" />
+  <xacro:property name="jetdrive_z" value="-0.1" />
 
   <!-- ============================================================
        End of survey offsets
@@ -114,8 +121,10 @@
 
   <link name="${namespace}/motion_sensor">
     <inertial>
-      <mass value="5.0"/>
-      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+      <!-- Near-zero mass: sensor link is a reference frame only.
+           Total displacement (883 kg) is accounted for in hull_mass. -->
+      <mass value="0.01"/>
+      <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
     </inertial>
   </link>
 
@@ -139,8 +148,7 @@
 
   <xacro:include filename="$(find ben_description)/urdf/sensors/mbes.xacro" />
   <xacro:ben_mbes name="mbes"
-    x="${mru_x + mbes_x}" y="${mru_y + mbes_y}" z="${mru_z + mbes_z}"
-    R="${radians(180)}"/>
+    x="${mru_x + mbes_x}" y="${mru_y + mbes_y}" z="${mru_z + mbes_z}"/>
 
   <!-- POSMV-mounted sensors (positions relative to motion_sensor) -->
 
@@ -150,10 +158,10 @@
   <xacro:include filename="$(find ben_description)/urdf/sensors/oem_heading_sensor.xacro" />
   <xacro:oem_heading_sensor name="heading"/>
 
-  <!-- Jetdrive -->
+  <!-- Jetdrive (Alamarin-Jet AJ 160 waterjet) -->
 
   <xacro:include filename="$(find ben_description)/urdf/jetdrive.xacro" />
-  <xacro:engine prefix="${namespace}/"
-    position="${mru_x + engine_x} ${mru_y + engine_y} ${mru_z + engine_z}"/>
+  <xacro:ben_jetdrive name="jetdrive"
+    x="${mru_x + jetdrive_x}" y="${mru_y + jetdrive_y}" z="${mru_z + jetdrive_z}"/>
 
 </robot>
