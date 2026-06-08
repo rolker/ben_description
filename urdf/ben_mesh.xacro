@@ -66,14 +66,6 @@
   <xacro:property name="mbes_y" value="0.0" />
   <xacro:property name="mbes_z" value="-0.4" />
 
-  <!-- Garmin GCV-20 sidescan (hull-mounted, relative to MRU).
-       PLACEHOLDER: ~0.5 m forward of the MBES, glued to the hull with the
-       transducer faces ~1 cm below it. Anchored to the MBES offsets so it
-       tracks the same hull reference; refine once the install is measured. -->
-  <xacro:property name="garmin_sidescan_x" value="${mbes_x + 0.5}" />
-  <xacro:property name="garmin_sidescan_y" value="${mbes_y}" />
-  <xacro:property name="garmin_sidescan_z" value="${mbes_z - 0.01}" />
-
   <!-- GPS (POSMV-mounted, relative to motion_sensor) -->
   <xacro:property name="gps_x" value="-0.953" />
   <xacro:property name="gps_y" value="0.103" />
@@ -157,11 +149,6 @@
   <xacro:include filename="$(find ben_description)/urdf/sensors/mbes.xacro" />
   <xacro:ben_mbes name="mbes"
     x="${mru_x + mbes_x}" y="${mru_y + mbes_y}" z="${mru_z + mbes_z}"/>
-
-  <xacro:include filename="$(find ben_description)/urdf/sensors/garmin_sidescan.xacro" />
-  <xacro:ben_garmin_sidescan name="garmin_sidescan"
-    x="${mru_x + garmin_sidescan_x}" y="${mru_y + garmin_sidescan_y}"
-    z="${mru_z + garmin_sidescan_z}"/>
 
   <!-- POSMV-mounted sensors (positions relative to motion_sensor) -->
 
