@@ -5,3 +5,7 @@ models/meshes/BEN_shell.dae
 models/meshes/BEN_shell_blender.dae
 models/meshes/BEN_shell_onshape.dae
 models/meshes/Panoramic Housing.stl
+
+# Python bytecode written when the tests run from the source tree
+__pycache__/
+*.pyc
