@@ -253,12 +253,37 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # A distro job that failed before its upload leaves no artifact:
+          # fail, naming it, rather than compare against nothing.
+          missing=0
           for distro in jazzy rolling; do
             for f in ben.urdf ben.c14n.urdf; do
-              echo "$distro $f: $(wc -l < "urdf/urdf-$distro/$f") lines, sha256 $(sha256sum "urdf/urdf-$distro/$f" | cut -d' ' -f1)"
+              if [ ! -f "urdf/urdf-$distro/$f" ]; then
+                echo "::error title=URDF missing::urdf-$distro/$f was not downloaded; the $distro job did not upload its processed URDF."
+                missing=1
+              fi
             done
-          done | tee -a "$GITHUB_STEP_SUMMARY"
-          if diff -u urdf/urdf-jazzy/ben.c14n.urdf urdf/urdf-rolling/ben.c14n.urdf > urdf.diff; then
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          # diff exits 0 when the files match, 1 when they differ and 2 on
+          # trouble (an unreadable file); only 1 is a warning.
+          status=0
+          diff -u urdf/urdf-jazzy/ben.c14n.urdf urdf/urdf-rolling/ben.c14n.urdf > urdf.diff || status=$?
+          if [ "$status" -gt 1 ]; then
+            echo "::error title=URDF compare failed::diff exited $status."
+            exit "$status"
+          fi
+          for distro in jazzy rolling; do
+            for f in ben.urdf ben.c14n.urdf; do
+              line="$distro $f: $(wc -l < "urdf/urdf-$distro/$f") lines, sha256 $(sha256sum "urdf/urdf-$distro/$f" | cut -d' ' -f1)"
+              echo "$line"
+              echo "- $line" >> "$GITHUB_STEP_SUMMARY"
+            done
+          done
+          echo >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -eq 0 ]; then
             echo "Canonical URDFs are identical on Jazzy and Rolling." | tee -a "$GITHUB_STEP_SUMMARY"
           else
             cat urdf.diff
