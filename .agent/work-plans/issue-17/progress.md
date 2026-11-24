@@ -348,3 +348,13 @@ CI run 45412686966 (the repository's first): all three jobs succeeded, no annota
 - [x] (suggestion, Local Review (Pre-Push) @ `3c77db7`, covers `20349bb` via bookkeeping) The `ParameterValue` check is keyed on the launch file, not on the `robot_description` parameter: it can miss a bare `Command(...)` beside another wrapped value, and would fail a future launch file added to `LAUNCH_FILES` that carries no URDF. Valid; deferred: no case in today's three launch files; for the follow-up issue the host drafts for the owner — `test/test_description.py:134-146`
 
 ### False positives
+
+## Checkpoint
+**Status**: complete
+**When**: 2026-11-24 09:30 -05:00
+**By**: Claude Code Agent (claude-fable-5-2)
+**Decided-by**: owner
+**After**: merge
+**Decision**: merge
+
+The owner's answers, 2026-11-24: "Merge when CI is green (Recommended)" for pull request 18; "Backport right after (Recommended)" for the hand backport to `jazzy` of the nine code and CI commits; "Open it (Recommended)" for the follow-up issue in this repository. The host merges only after the CI run on the pushed records passes.
