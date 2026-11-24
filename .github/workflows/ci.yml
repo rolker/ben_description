@@ -1,0 +1,271 @@
+# CI for ben_description. The same file is carried on the rolling and jazzy
+# branches; pushes and pull requests to either run it. Modelled on
+# marine_colormap's workflow (rolling branch).
+#
+# rosdep is given only the paths of the build step's --packages-up-to
+# closure, taken from colcon list, with no -r: a key that does not install
+# fails the job. The test step does not source install/setup.bash: the test
+# finds the installed package through the install prefix CMake passes to it,
+# and colcon test gives the package only the environment of its declared
+# dependencies, so an undeclared dependency fails here instead of being
+# hidden by the overlay. rviz2, used by launch/display_launch.py only, is not
+# declared (see package.xml) and nothing here needs it: the test loads that
+# launch file without starting its nodes.
+#
+# After the build, each job processes the installed ben_mesh.xacro the way a
+# user does (install/setup.bash sourced, namespace:=ben), prints the line
+# count and sha256 of the raw output and of a canonical form (XML C14N 2.0:
+# attributes sorted, comments and whitespace-only text dropped, then one
+# element per line), and uploads both as artifact urdf-<distro>. Job
+# compare-urdf diffs the two canonical forms; a difference is a warning to
+# explain, not a failure. It runs when neither distro job was skipped, so it
+# also runs after a test failure, and it is skipped on jazzy, like the
+# rolling job.
+#
+# Job "rolling" is skipped for pull requests to and pushes on jazzy
+# (github.base_ref is the target branch of a pull request; github.ref_name is
+# the pushed branch), so on the jazzy branch this file runs the jazzy job
+# only.
+
+name: CI
+
+on:
+  push:
+    branches: [rolling, jazzy]
+  pull_request:
+    branches: [rolling, jazzy]
+
+jobs:
+  jazzy:
+    name: build-and-test (jazzy)
+    # The container supplies the distro's OS; the host runner only runs it.
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    container:
+      image: ros:jazzy-ros-core
+
+    steps:
+      - name: Update apt
+        run: apt-get update
+
+      - name: Install ros dev tools
+        run: DEBIAN_FRONTEND=noninteractive apt-get -y install ros-dev-tools
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Init rosdep
+        run: |
+          if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then
+            rosdep init
+          fi
+
+      - name: Update rosdep
+        run: rosdep update
+
+      - name: Create workspace
+        run: mkdir -p ../ws/src && ln -s "$GITHUB_WORKSPACE" ../ws/src/ben_description
+
+      - name: Install ROS dependencies
+        working-directory: ../ws
+        shell: bash
+        run: |
+          set -euo pipefail
+          paths="$(colcon list --base-paths src --paths-only --packages-up-to ben_description)"
+          if [ -z "$paths" ]; then
+            echo "colcon list returned no package paths" >&2
+            exit 1
+          fi
+          echo "$paths"
+          # shellcheck disable=SC2086
+          DEBIAN_FRONTEND=noninteractive rosdep install --ignore-src -y --from-paths $paths
+
+      - name: Build
+        working-directory: ../ws
+        run: >
+          bash -c 'source /opt/ros/jazzy/setup.bash &&
+          colcon build --packages-up-to ben_description
+          --event-handlers console_cohesion+'
+
+      - name: Processed URDF
+        working-directory: ../ws
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          source install/setup.bash
+          set -eo pipefail
+          out="$GITHUB_WORKSPACE/ci-urdf"
+          mkdir -p "$out"
+          xacro install/ben_description/share/ben_description/urdf/ben_mesh.xacro namespace:=ben > "$out/ben.urdf"
+          python3 - "$out/ben.urdf" > "$out/ben.c14n.urdf" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          text = ET.canonicalize(from_file=sys.argv[1], with_comments=False, strip_text=True)
+          print(text.replace('><', '>\n<'))
+          PY
+          for pkg in xacro urdfdom; do
+            echo "$pkg $(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' "/opt/ros/jazzy/share/$pkg/package.xml")"
+          done
+          python3 --version
+          wc -l "$out/ben.urdf" "$out/ben.c14n.urdf"
+          sha256sum "$out/ben.urdf" "$out/ben.c14n.urdf"
+
+      - name: Upload processed URDF
+        uses: actions/upload-artifact@v7
+        with:
+          name: urdf-jazzy
+          # Relative: in a container job github.workspace is the host's path.
+          path: ci-urdf/
+          if-no-files-found: error
+
+      - name: Test
+        working-directory: ../ws
+        run: >
+          bash -c 'source /opt/ros/jazzy/setup.bash &&
+          colcon test --packages-select ben_description
+          --event-handlers console_direct+
+          --return-code-on-test-failure'
+
+      - name: Test results
+        working-directory: ../ws
+        run: >
+          bash -c 'source /opt/ros/jazzy/setup.bash &&
+          colcon test-result --verbose'
+        if: always()
+
+  rolling:
+    name: build-and-test (rolling)
+    if: (github.base_ref || github.ref_name) != 'jazzy'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    container:
+      image: ros:rolling-ros-core
+
+    steps:
+      - name: Update apt
+        run: apt-get update
+
+      - name: Install ros dev tools
+        run: DEBIAN_FRONTEND=noninteractive apt-get -y install ros-dev-tools
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Init rosdep
+        run: |
+          if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then
+            rosdep init
+          fi
+
+      - name: Update rosdep
+        run: rosdep update
+
+      - name: Create workspace
+        run: mkdir -p ../ws/src && ln -s "$GITHUB_WORKSPACE" ../ws/src/ben_description
+
+      - name: Install ROS dependencies
+        working-directory: ../ws
+        shell: bash
+        run: |
+          set -euo pipefail
+          paths="$(colcon list --base-paths src --paths-only --packages-up-to ben_description)"
+          if [ -z "$paths" ]; then
+            echo "colcon list returned no package paths" >&2
+            exit 1
+          fi
+          echo "$paths"
+          # shellcheck disable=SC2086
+          DEBIAN_FRONTEND=noninteractive rosdep install --ignore-src -y --from-paths $paths
+
+      - name: Build
+        working-directory: ../ws
+        run: >
+          bash -c 'source /opt/ros/rolling/setup.bash &&
+          colcon build --packages-up-to ben_description
+          --event-handlers console_cohesion+'
+
+      - name: Processed URDF
+        working-directory: ../ws
+        shell: bash
+        run: |
+          source /opt/ros/rolling/setup.bash
+          source install/setup.bash
+          set -eo pipefail
+          out="$GITHUB_WORKSPACE/ci-urdf"
+          mkdir -p "$out"
+          xacro install/ben_description/share/ben_description/urdf/ben_mesh.xacro namespace:=ben > "$out/ben.urdf"
+          python3 - "$out/ben.urdf" > "$out/ben.c14n.urdf" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          text = ET.canonicalize(from_file=sys.argv[1], with_comments=False, strip_text=True)
+          print(text.replace('><', '>\n<'))
+          PY
+          for pkg in xacro urdfdom; do
+            echo "$pkg $(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' "/opt/ros/rolling/share/$pkg/package.xml")"
+          done
+          python3 --version
+          wc -l "$out/ben.urdf" "$out/ben.c14n.urdf"
+          sha256sum "$out/ben.urdf" "$out/ben.c14n.urdf"
+
+      - name: Upload processed URDF
+        uses: actions/upload-artifact@v7
+        with:
+          name: urdf-rolling
+          # Relative: in a container job github.workspace is the host's path.
+          path: ci-urdf/
+          if-no-files-found: error
+
+      - name: Test
+        working-directory: ../ws
+        run: >
+          bash -c 'source /opt/ros/rolling/setup.bash &&
+          colcon test --packages-select ben_description
+          --event-handlers console_direct+
+          --return-code-on-test-failure'
+
+      - name: Test results
+        working-directory: ../ws
+        run: >
+          bash -c 'source /opt/ros/rolling/setup.bash &&
+          colcon test-result --verbose'
+        if: always()
+
+  compare-urdf:
+    name: compare URDF (jazzy, rolling)
+    needs: [jazzy, rolling]
+    # Runs after a test failure too (the artifacts are uploaded after the
+    # build); skipped when either distro job is, as on the jazzy branch.
+    if: ${{ !cancelled() && needs.jazzy.result != 'skipped' && needs.rolling.result != 'skipped' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download processed URDFs
+        uses: actions/download-artifact@v8
+        with:
+          pattern: urdf-*
+          path: urdf
+
+      - name: Compare
+        shell: bash
+        run: |
+          set -euo pipefail
+          for distro in jazzy rolling; do
+            for f in ben.urdf ben.c14n.urdf; do
+              echo "$distro $f: $(wc -l < "urdf/urdf-$distro/$f") lines, sha256 $(sha256sum "urdf/urdf-$distro/$f" | cut -d' ' -f1)"
+            done
+          done | tee -a "$GITHUB_STEP_SUMMARY"
+          if diff -u urdf/urdf-jazzy/ben.c14n.urdf urdf/urdf-rolling/ben.c14n.urdf > urdf.diff; then
+            echo "Canonical URDFs are identical on Jazzy and Rolling." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            cat urdf.diff
+            {
+              echo '```diff'
+              cat urdf.diff
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning title=URDF differs::The canonical URDF differs between Jazzy and Rolling; see the diff in this job's log and summary."
+          fi
