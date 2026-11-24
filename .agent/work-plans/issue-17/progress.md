@@ -66,3 +66,13 @@ issue: 17
 - [ ] Add a minimal test (processes with xacro, parses with `check_urdf`, `package://` and `$(find)` paths resolve), so the CI result means something; wire it so it runs under `test.sh`.
 - [ ] In CI, print and compare a checksum of the processed `ben_mesh.xacro` URDF across the Jazzy and Rolling jobs, upload both as artifacts, and treat a difference as a finding to explain (xacro version formatting against a real difference) rather than an automatic failure.
 - [ ] Track as a follow-up issue, not in this port: missing `load.launch` that `ben_project11`'s ROS 1 launch files include, `ben_project11` not declaring `ben_description`, `publish_state_launch.py` not passing `namespace` to xacro (so its URDF always uses `ben`), `display_launch.py` and `publish_state_launch.py` differing on that, and lint/copyright headers.
+
+## Checkpoint
+**Status**: complete
+**When**: 2026-11-24 08:39 -05:00
+**By**: Claude Code Agent (claude-fable-5-2)
+**Decided-by**: host (the issue review found the issue well scoped; its actions are for the planner and none changes what the work is for or its scope)
+**After**: issue-actions
+**Decision**: proceed
+
+Read: the Issue Review, status complete. For the planner: (1) cause 11: `package.xml` lacks `launch`, `launch_ros`, `ament_index_python` and `rviz2`, which the launch files use, and `ament_cmake` as a build tool; one code commit that holds on Jazzy. (2) The package has no tests, so "passes" means nothing yet: the plan adds the smallest test that has teeth (xacro processes, the URDF parses, `package://` and `$(find)` paths resolve) and says what it would catch; this is within the issue's scope because its "Done when" asks for CI that passes. Linters are not added unless the plan shows they pass or the fixes are trivial (a port makes no big changes; lint failures in existing launch files go to a follow-up issue). (3) "Same URDF on Rolling as on Jazzy" is shown in CI: each job processes `ben_mesh.xacro` from the install tree and prints a checksum and line count of a canonical form; the plan says how the two are compared and that a difference is a finding to explain, not an automatic failure. The items the review lists for a follow-up issue (a `namespace` argument not passed to xacro in `publish_state_launch.py`, lint in `launch/`, and three items that belong to rolker/ben_project11) are left alone here.
