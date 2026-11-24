@@ -142,3 +142,13 @@ The plan is sound in its test design, comparison and CI shape: the test exercise
 - [ ] CI: relative `path: ci-urdf/` for `upload-artifact` in container jobs.
 - [ ] Optional: `compare-urdf` condition that survives a test failure but stays skipped on `jazzy`.
 - [ ] Test: assertion message on the 32-link count.
+
+## Checkpoint
+**Status**: complete
+**When**: 2026-11-24 08:53 -05:00
+**By**: Claude Code Agent (claude-fable-5-2)
+**Decided-by**: host (the plan review's verdict is needs-work, but each of its six findings has a concrete, settled correction that the implementer applies and records; a second plan round would add nothing a code review does not check; none changes the issue's scope)
+**After**: plan
+**Decision**: proceed
+
+Read: the Plan Review at `3c1ff46`, verdict needs-work, six findings. How each is applied, overriding the plan where they differ. (1) **`rviz2` is not declared.** The owner asked on 2026-11-24: "So, a robot can use the description file but not use rviz. Does an exec depend get pulled in for a build? What's the cleanest way to handle this?" It would be installed on every vehicle that installs the description (`rosdep install` takes run-time dependencies; a released package's `exec_depend`s are hard dependencies), so commit 1 declares `launch`, `launch_ros`, `ament_index_python` and the `ament_cmake` build tool only, and `package.xml` gets a short comment that `display_launch.py` needs `rviz2`, left undeclared on purpose so vehicles do not install a viewer. The follow-up list gains: move `display_launch.py` and `rviz/urdf.rviz` into an operator-side or `_viz` package that declares `rviz2`. The pull request says plainly that one used dependency is left undeclared and why. The owner was told this and may change it. (2) **`load_launch.py` is fixed in this port**, in a commit of its own: `value_type=str` on its `ParameterValue`, so the URDF is not parsed as YAML (it fails to start on both distros today; the issue's scope says "start its launch files there; fix what fails"); the same parameter in `publish_state_launch.py` is checked and treated the same way if it has the same form; the implementer starts each launch file it can on Rolling (the display one needs a display) and records the result. The alternative was the follow-up list. (3) `upload-artifact` gets a relative path, not `${{ github.workspace }}`. (4) `compare-urdf` runs when neither distro job was skipped, so it still runs after a test failure. (5) The 32-link assertion carries a message saying to update the count when a link is added or removed on purpose. (6) The plan entry's time is off by a few minutes; noted here, not corrected.
