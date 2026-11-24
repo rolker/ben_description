@@ -317,3 +317,13 @@ Other checks:
 
 ### Findings
 - [ ] (suggestion) The `ParameterValue` check is keyed on the file, not on the parameter. It still passes if a bare `Command(...)` for `robot_description` sits beside another `ParameterValue(..., value_type=str)`. It fails a launch file added to `LAUNCH_FILES` that legitimately has no URDF, or that has a non-string `ParameterValue`; the message ("the URDF must be passed as one") at least tells that author why. Keying it on the `robot_description` value and `SetParameter(value=...)` would remove both. Neither case exists in today's three files; fine for the follow-up issue (Gemini 1, Codex 1, both rated must-fix; I rate it a suggestion) — `test/test_description.py:134-146`
+
+## Checkpoint
+**Status**: complete
+**When**: 2026-11-24 09:18 -05:00
+**By**: Claude Code Agent (claude-fable-5-2)
+**Decided-by**: host (the round 2 pre-push review approved with no must-fix; Jazzy cannot be built on the development machine and this repository has never had CI, so the pushed branch's first run is the first Jazzy evidence and the first comparison of the two distros' URDFs)
+**After**: publish
+**Decision**: publish
+
+Read: the Local Review (Pre-Push) at `3c77db7`, round 2, verdict approved, ship recommended, one suggestion open: the `ParameterValue` check in the test is keyed on the launch file, not on the `robot_description` parameter, so it can miss a bare `Command(...)` beside another wrapped value and can fail a future launch file that carries no URDF (`test/test_description.py:134-146`); neither case exists in today's three files. It stays open and goes through triage after publish with what the first CI run shows. Recorded for the pull request: `rviz2` is deliberately not declared (the owner, 2026-11-24: "So, a robot can use the description file but not use rviz. Does an exec depend get pulled in for a build? What's the cleanest way to handle this?"); `load_launch.py` now starts but still cannot deliver the URDF to a node. The pull request says `Part of #17`.
