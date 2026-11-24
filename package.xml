@@ -24,6 +24,9 @@
        purpose: vehicles that only use the description should not install a
        viewer. Install rviz2 on the machine that runs the display. -->
 
+  <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>urdfdom</test_depend>
+
   <export>
     <build_type>ament_cmake</build_type>
   </export>
