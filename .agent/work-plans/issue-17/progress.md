@@ -76,3 +76,11 @@ issue: 17
 **Decision**: proceed
 
 Read: the Issue Review, status complete. For the planner: (1) cause 11: `package.xml` lacks `launch`, `launch_ros`, `ament_index_python` and `rviz2`, which the launch files use, and `ament_cmake` as a build tool; one code commit that holds on Jazzy. (2) The package has no tests, so "passes" means nothing yet: the plan adds the smallest test that has teeth (xacro processes, the URDF parses, `package://` and `$(find)` paths resolve) and says what it would catch; this is within the issue's scope because its "Done when" asks for CI that passes. Linters are not added unless the plan shows they pass or the fixes are trivial (a port makes no big changes; lint failures in existing launch files go to a follow-up issue). (3) "Same URDF on Rolling as on Jazzy" is shown in CI: each job processes `ben_mesh.xacro` from the install tree and prints a checksum and line count of a canonical form; the plan says how the two are compared and that a difference is a finding to explain, not an automatic failure. The items the review lists for a follow-up issue (a `namespace` argument not passed to xacro in `publish_state_launch.py`, lint in `launch/`, and three items that belong to rolker/ben_project11) are left alone here.
+
+## Plan Authored
+**Status**: complete
+**When**: 2026-11-24 08:52 -05:00
+**By**: Claude Code Agent (claude-opus-5-5)
+**Plan**: `.agent/work-plans/issue-17/plan.md` at `3c1ff46`
+
+Three commits, each backported by cherry-pick: declare `ament_cmake`, `ament_index_python`, `launch`, `launch_ros`, `rviz2` (cause 11); add a pytest test that processes `ben_mesh.xacro` from the install tree (default and `namespace:=boat2`), runs `check_urdf`, resolves every mesh and `$(find)` path and loads the three launch files (each check shown to fail on a deliberate break); add a CI workflow with Jazzy and Rolling jobs and a `compare-urdf` job that diffs a C14N form of the URDF (xacro is 2.1.1 on both distros), warning rather than failing on a difference. Jazzy is verified by CI only.
