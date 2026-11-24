@@ -327,3 +327,24 @@ Other checks:
 **Decision**: publish
 
 Read: the Local Review (Pre-Push) at `3c77db7`, round 2, verdict approved, ship recommended, one suggestion open: the `ParameterValue` check in the test is keyed on the launch file, not on the `robot_description` parameter, so it can miss a bare `Command(...)` beside another wrapped value and can fail a future launch file that carries no URDF (`test/test_description.py:134-146`); neither case exists in today's three files. It stays open and goes through triage after publish with what the first CI run shows. Recorded for the pull request: `rviz2` is deliberately not declared (the owner, 2026-11-24: "So, a robot can use the description file but not use rviz. Does an exec depend get pulled in for a build? What's the cleanest way to handle this?"); `load_launch.py` now starts but still cannot deliver the URDF to a node. The pull request says `Part of #17`.
+
+## Integrated Review
+**Status**: complete
+**When**: 2026-11-24 09:21 -05:00
+**By**: Claude Code Agent (claude-opus-5-5)
+**Reviews-read**: none
+
+**PR**: #18 at `20349bb`
+**Sources**: 3 (Local Review (Pre-Push) @ `85d779e`, round 1, all findings since fixed; Local Review (Pre-Push) @ `3c77db7`, covers `20349bb` via bookkeeping; CI rollup, run 45412686966). No GitHub reviews, inline comments or conversation comments; no Copilot review or Copilot check-run on the head.
+**Cross-source confirmations**: 0
+**CI**: all-pass
+
+CI run 45412686966 (the repository's first): all three jobs succeeded, no annotations on any of them.
+- build-and-test (jazzy), 1m05s: rosdep installed ros-jazzy-{urdfdom, joint-state-publisher, robot-state-publisher, xacro}, "All required rosdeps installed successfully"; build `Summary: 1 package finished [4.01s]`; pytest `15 passed in 0.34s` (Python 3.12.3, pytest 7.4.4); test-result `Summary: 16 tests, 0 errors, 0 failures, 0 skipped`. Processed URDF: xacro 2.1.1, urdfdom 4.0.2, Python 3.12.3; raw 555 lines `ef1fb08f…`, canonical 624 lines `d893e417…`.
+- build-and-test (rolling), 1m13s: same four keys as ros-rolling-*, all installed; build `Summary: 1 package finished [3.95s]`; pytest `15 passed in 0.35s` (Python 3.14.4, pytest 9.0.2); `Summary: 16 tests, 0 errors, 0 failures, 0 skipped`. Processed URDF: xacro 2.1.1, urdfdom 6.0.2, Python 3.14.4; raw 555 lines `ef1fb08f…`, canonical 624 lines `d893e417…` (matches the local Rolling run).
+- compare URDF (jazzy, rolling), 6s: both artifacts downloaded with digests verified; reported "Canonical URDFs are identical on Jazzy and Rolling." No warning annotation. The raw outputs are byte-identical too (same sha256), so the comparison of canonical forms was not even needed to hide a formatting difference. The first Jazzy build and test, including `check_urdf` under urdfdom 4.0.2, passed.
+
+### Findings
+- [x] (suggestion, Local Review (Pre-Push) @ `3c77db7`, covers `20349bb` via bookkeeping) The `ParameterValue` check is keyed on the launch file, not on the `robot_description` parameter: it can miss a bare `Command(...)` beside another wrapped value, and would fail a future launch file added to `LAUNCH_FILES` that carries no URDF. Valid; deferred: no case in today's three launch files; for the follow-up issue the host drafts for the owner — `test/test_description.py:134-146`
+
+### False positives
