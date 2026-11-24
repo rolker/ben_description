@@ -11,10 +11,18 @@
 
   <license>BSD</license>
 
+  <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_ros</buildtool_depend>
   <depend>joint_state_publisher</depend>
   <depend>robot_state_publisher</depend>
   <depend>xacro</depend>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <!-- launch/display_launch.py also needs rviz2. It is left undeclared on
+       purpose: vehicles that only use the description should not install a
+       viewer. Install rviz2 on the machine that runs the display. -->
 
   <export>
     <build_type>ament_cmake</build_type>
