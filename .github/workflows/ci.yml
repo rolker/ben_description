@@ -5,12 +5,16 @@
 # rosdep is given only the paths of the build step's --packages-up-to
 # closure, taken from colcon list, with no -r: a key that does not install
 # fails the job. The test step does not source install/setup.bash: the test
-# finds the installed package through the install prefix CMake passes to it,
-# and colcon test gives the package only the environment of its declared
-# dependencies, so an undeclared dependency fails here instead of being
-# hidden by the overlay. rviz2, used by launch/display_launch.py only, is not
-# declared (see package.xml) and nothing here needs it: the test loads that
-# launch file without starting its nodes.
+# finds the installed package through the install prefix CMake passes to it.
+# What this checks of package.xml is limited: the ros-core image already
+# contains ament_cmake, ament_cmake_pytest, ament_index_python, launch and
+# launch_ros, and every step sources /opt/ros/<distro>, so a missing or
+# wrong declaration of those does not show here. Only rosdep's install of
+# the remaining keys (xacro, urdfdom, robot_state_publisher,
+# joint_state_publisher) is really checked. rviz2, used by
+# launch/display_launch.py only, is not declared (see package.xml) and
+# nothing here needs it: the test loads that launch file without starting
+# its nodes.
 #
 # After the build, each job processes the installed ben_mesh.xacro the way a
 # user does (install/setup.bash sourced, namespace:=ben), prints the line
