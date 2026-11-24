@@ -84,3 +84,61 @@ Read: the Issue Review, status complete. For the planner: (1) cause 11: `package
 **Plan**: `.agent/work-plans/issue-17/plan.md` at `3c1ff46`
 
 Three commits, each backported by cherry-pick: declare `ament_cmake`, `ament_index_python`, `launch`, `launch_ros`, `rviz2` (cause 11); add a pytest test that processes `ben_mesh.xacro` from the install tree (default and `namespace:=boat2`), runs `check_urdf`, resolves every mesh and `$(find)` path and loads the three launch files (each check shown to fail on a deliberate break); add a CI workflow with Jazzy and Rolling jobs and a `compare-urdf` job that diffs a C14N form of the URDF (xacro is 2.1.1 on both distros), warning rather than failing on a difference. Jazzy is verified by CI only.
+
+## Plan Review
+**Status**: complete
+**When**: 2026-11-24 08:55 -05:00
+**By**: Claude Code Agent (claude-opus-5-5)
+**Verdict**: needs-work
+
+**Issue**: #17 — Check and port ben_description on ROS 2 Rolling, and add CI
+**Plan**: `.agent/work-plans/issue-17/plan.md` at `3c1ff46`
+**Branch**: `feature/issue-17`
+
+Owner direction received during this review (relayed by the host), recorded here. The owner asked: "So, a robot can use the description file but not use rviz. Does an exec depend get pulled in for a build? What's the cleanest way to handle this?" The host answered that `rosdep install --from-paths` installs run-time dependencies too and a released package's `exec_depend`s become hard dependencies, and decided (the owner may still change it): **the port does not declare `rviz2`**; `display_launch.py` stays as it is; `package.xml` gets a short comment that the display launch file needs `rviz2`, left undeclared on purpose so vehicles do not install a viewer; moving the display launch file and its rviz configuration into an operator-side or `_viz` package that declares `rviz2` goes on the follow-up list. `launch`, `launch_ros`, `ament_index_python` and the `ament_cmake` build tool are still declared.
+
+### Evaluation
+
+| Dimension | Verdict | Notes |
+|---|---|---|
+| Scope | Good | Three commits (package.xml, test, CI), 4 files; fits one PR and the owner's one-fix-per-commit backport rule. |
+| Issue alignment | Needs work | `rviz2` must go per the host's decision (finding 1). The issue asks to *start* the launch files and fix what fails; the plan only loads them, and `load_launch.py` fails when started (finding 2). Serves: "None stated (the project has no goals or design document); the port tracked in rolker/unh_marine_autonomy#415." Acceptable: the project keeps no goals. |
+| File targeting | Good | `package.xml`, `CMakeLists.txt`, `test/test_description.py`, `.github/workflows/ci.yml`. If finding 2 is fixed in the port, `launch/load_launch.py` is added in its own commit. |
+| Consequences | Needs work | The `rviz2` row ("consumers' installs gain rviz2, accepted") is reversed by the host's decision; the follow-up list gains the `_viz` move. Consumers checked: `marine_simulation` declares `rviz2`, `robot_state_publisher`, `joint_state_publisher` itself; `ben_project11` declares none of them nor `ben_description`. |
+| Principle alignment | Good | Test with teeth, shown to fail on breaks (three repeated here, see below); minimal route with alternatives named. |
+| ADR compliance | Good | ADR-0013 (records in progress.md, out of code commits), ADR-0002 (worktree; scratch builds outside the source tree). No other ADR triggered. |
+| ROS conventions | Good | Dependency kinds right (`exec_depend` for launch-time Python, `test_depend` for test tools); `ament_add_pytest_test` is the standard registration. CI detail in findings 3 and 4. |
+
+### Checks made for this review
+
+- **Test mechanics (Rolling, scratch workspaces, `env -i`, only `/opt/ros/rolling` sourced).** `CMAKE_INSTALL_PREFIX` is `install/` in a merged layout and `install/ben_description` in the isolated layout (the CI default); both prefixes carry `share/ament_index`, so prepending the prefix to `AMENT_PREFIX_PATH` makes xacro's `$(find ben_description)` resolve to the installed tree in both, with and without `--symlink-install`. An equivalent checker on both layouts: xacro rc 0, `check_urdf` `root Link: <ns>/base_link`, 32 links all prefixed, 5 filenames all present, for the default and `boat2`.
+- **Breaks repeated** (my own checker, same checks a–d): collision-mesh typo — only (d) catches it, `check_urdf` passes; lidar parent `base_lnk` — (b) fails for both namespaces with "parent link [<ns>/base_lnk] ... not found"; lidar link and joint child hard-coded `ben/` — `check_urdf` passes, only the (c) prefix check fails, and only for `boat2`. All three agree with the plan's table. (Side note: an incremental rebuild within the same second left a stale installed xacro; the planner's clean rebuilds avoid this, and CI is always clean.)
+- **`check_urdf` from `urdfdom`**: `ros-jazzy-urdfdom` 4.0.2 deb (noble index) contains `/opt/ros/jazzy/bin/check_urdf`; Rolling's has `/opt/ros/rolling/bin/check_urdf`. `rosdep resolve`: `urdfdom` → `ros-jazzy-urdfdom` (noble) / `ros-rolling-urdfdom` (resolute); every other planned key resolves on both.
+- **rosdistro**: xacro `2.1.1-1` (jazzy) / `2.1.1-2` (rolling); urdfdom `4.0.2-1` / `6.0.2-1`; Python 3.12 (noble) / 3.14.4 (here). The planner's correction of the issue review holds.
+- **Action versions**: latest `upload-artifact` v7.0.2, `download-artifact` v8.0.2, `checkout` v7.0.1 (v6.1.0 exists). v8 download reads v4+-style artifacts; v8's breaking changes (no unzip of non-zipped downloads, digest mismatch errors) do not affect a default zipped v7 upload.
+- **Workflow against `marine_colormap`'s**: `set -u` before sourcing `setup.bash` fails here ("AMENT_TRACE_SETUP_FILES: unbound variable"); the model never sources under `-u` (its `set -euo` step does not source), so `set -eo pipefail` after the `source` matches it. The mesh archive is a plain bzip2 file (not LFS); `file(ARCHIVE_EXTRACT)` uses CMake's libarchive (linked to libbz2), so no `tar`/`bzip2` binary is needed. `needs: [jazzy, rolling]` with no `if:` is skipped when `rolling` is skipped, so `compare-urdf` does not run on `jazzy`, as the plan says.
+- **Canonical form**: C14N 2.0 keeps attribute values, element order and non-blank text verbatim, so a changed number, value, order or text shows; it hides only attribute order, comments and whitespace-only text, which do not change a URDF. A false difference needs the generator to format differently (same xacro; Python's shortest float repr unchanged between 3.12 and 3.14). A `::warning::` shows as an annotation on the run page and in the job summary, not on the green tick; adequate for "a finding to explain, not a failure" as the checkpoint set.
+- **Loading `display_launch.py` without `rviz2`**: a `launch_ros` `Node` with a non-existent package constructs without error, and all three launch files load with `get_launch_description_from_python_launch_file`; the package is looked up only when the node is executed. So check (f) passes in a container without rviz2.
+- **Launch files started on Rolling** (`ROS_DOMAIN_ID=173`, localhost only): `publish_state_launch.py namespace:=boat2` starts both nodes; `load_launch.py` fails (finding 2).
+- **Multi-vehicle simulation**: `demo_boats_launch.py` runs its own `robot_state_publisher` with `xacro ... namespace:=<n>`; no simulator launch includes `publish_state_launch.py`, `load_launch.py` or `ben_core_launch.py` (it uses its own nav2 composed launch). Only `ben_project11`'s `ben_core_launch.py` includes `publish_state_launch.py`, on a single real boat named `ben`. Leaving the namespace gap to a follow-up is consistent with the owner's no-big-changes rule.
+
+### Findings
+
+1. **[Issue alignment] (high)** — Per the host's decision recorded above, commit 1 must drop `<exec_depend>rviz2</exec_depend>` and add a short `package.xml` comment that `display_launch.py` needs `rviz2`, left undeclared on purpose so vehicles do not install a viewer. Follow through in the plan: the Consequences row and Open Question 1 change; the "Alternative weighed ... Rejected" text and the `urdf_tutorial` prior-art line are superseded; the CI time estimate drops the 1 to 2 min it added for rviz; the follow-up list gains "move `display_launch.py` and `rviz/urdf.rviz` into an operator-side or `_viz` package that declares `rviz2`"; the pull request's cause-11 statement says plainly that one used dependency, `rviz2`, is left undeclared and why. Check (f) is unaffected (loading needs no rviz2, checked). No other declared or planned dependency has rviz's character: `joint_state_publisher` (the non-GUI one), `robot_state_publisher` and `xacro` are what a vehicle runs to publish the description; `launch`, `launch_ros`, `ament_index_python` are launch infrastructure; `ament_cmake_pytest` and `urdfdom` are `test_depend` (and `urdfdom` already arrives through `robot_state_publisher` → `urdf`). Nothing GUI remains.
+2. **[Issue alignment] (medium)** — The issue's scope says "start its launch files there; fix what fails". Started on Rolling, `load_launch.py` fails: "Caught exception in launch: Failed to convert '<?xml ...' using yaml rules". Its `ParameterValue(Command([...]))` has no `value_type=str`, so launch parses the URDF as YAML, and the comment "Source: OnShape CAD model" (added in `c5049ce`, 2026-03-02) is not valid YAML. `launch`'s `type_utils.py` and `launch_ros`'s `parameter_descriptions.py` behave the same on the `jazzy` branches (diff is type annotations only), so it fails on Jazzy too: a pre-existing defect, not a port break. No consumer in the Rolling clones uses `load_launch.py`. Check (f) cannot see it (it only loads). The plan should say it started each launch file it can (display needs a display) and either fix this (one line, `value_type=str`, its own commit, holds on Jazzy) or put it on the follow-up list; which is the host's or owner's choice.
+3. **[ROS conventions] (low)** — In the container jobs, give `upload-artifact` a relative `path: ci-urdf/` (or the container path from `$GITHUB_WORKSPACE`), not `${{ github.workspace }}/ci-urdf`: in container jobs the `github.workspace` context is the host path, not the container's `/__w/...`, a known source of "No files were found".
+4. **[ROS conventions] (low)** — `compare-urdf` with plain `needs:` is also skipped when either distro job fails at any later step (the test), although both artifacts were already uploaded after Build; the comparison is lost when it could explain a failure. Optional: `if: ${{ !cancelled() && needs.jazzy.result != 'skipped' && needs.rolling.result != 'skipped' }}` keeps it skipped on `jazzy` and runs it after a test failure (a build failure before upload would then fail the download step, which is visible).
+5. **[Principle alignment] (low)** — The hard-coded 32-link count is worth keeping: it is the only check that catches a sensor's include and call removed together. Give the assertion a message saying to update the count when a link is added or removed on purpose, so it reads as a guard and not a trap.
+6. **[Record] (low)** — The `## Plan Authored` entry's **When** is `08:52 -05:00`, but its commit `96e1d01` is at 08:47 and this review began before 08:52; correct the time in a later entry or leave a note.
+
+### Summary
+
+The plan is sound in its test design, comparison and CI shape: the test exercises the installed tree in merged and isolated layouts, its breaks reproduce, `check_urdf` ships on both distros under `urdfdom`, xacro is 2.1.1 on both, and the workflow matches the model. It needs two changes before implementation: drop `rviz2` with the comment and its knock-on edits (host decision), and deal with `load_launch.py` failing when started (fix or follow-up, the owner's or host's choice).
+
+### Recommended Actions
+
+- [ ] Commit 1: remove `rviz2`, add the `package.xml` comment; update Consequences, Open Question 1, Prior Art, CI time estimate, follow-up list (`_viz` move) and the PR's cause-11 text.
+- [ ] Record a start of each launch file on Rolling; fix `load_launch.py` (`value_type=str`, own commit) or add it to the follow-up list.
+- [ ] CI: relative `path: ci-urdf/` for `upload-artifact` in container jobs.
+- [ ] Optional: `compare-urdf` condition that survives a test failure but stays skipped on `jazzy`.
+- [ ] Test: assertion message on the 32-link count.
