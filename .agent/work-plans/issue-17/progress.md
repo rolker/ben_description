@@ -282,3 +282,38 @@ CI checks less of `package.xml` than it might seem: the ros-core image already c
 Nothing has run on Jazzy. The `uses:` steps and the `if:` expressions were not run by Actions; the rehearsal evaluated them by hand.
 
 Next: `/review-code --branch`
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-11-24 09:17 -05:00
+**By**: Claude Code Agent (claude-opus-5-5)
+**Dispatch**: resumed (agent ab2f1c579c64904e7, resume 1 of 3)
+**Verdict**: approved
+
+**Branch**: feature/issue-17 at `3c77db7`
+**Base**: origin/rolling
+**Depth**: Deep (reason: whole-branch classification as round 1: 434+ code lines, new `.github/workflows/ci.yml`); this round checks round 1's five findings and the fix diff `85d779e..27a7570`
+**Must-fix**: 0 | **Suggestions**: 1
+**Round**: 2 | **Ship**: recommended — no must-fix findings; remaining suggestions can be applied or tracked
+
+Round 1's findings, each checked:
+- must-fix, `compare-urdf` (`24fdc60`): fixed. I ran the step's `run:` block under `bash --noprofile --norc -eo pipefail` in four cases. Different (one attribute `1` → `1.0`): rc 0, the diff in log and summary, `::warning title=URDF differs::`. Jazzy's artifact missing: rc 1, `::error title=URDF missing::urdf-jazzy/ben.urdf was not downloaded; the jazzy job did not upload its processed URDF.` (and the same for the c14n file). Rolling's c14n missing: rc 1, the same error naming rolling. Identical: rc 0, "Canonical URDFs are identical". The summary lines are now a list.
+- suggestion, Test skipped after a failed URDF step (`a9236fb`): fixed. `id: build` is on Build and Test has `if: ${{ !cancelled() && steps.build.outcome == 'success' }}`, in both jobs. If Build fails, Test is skipped and the job is red. If the URDF step or the upload fails, Test runs and the job is still red. If everything passes, the job is green. A step's `if:` only decides whether that step runs: a job with any failed step (there is no `continue-on-error`) concludes failure, so the condition cannot turn a failed job green. "Test results" keeps `if: always()`.
+- suggestion, the header's claim about dependencies (`70ba0f4`): fixed. It now names the five ros-core packages CI cannot check (`ros_core` variant, checked in round 1) and the four keys rosdep does check.
+- suggestion, vacuous AST check (`b22b7fa`): fixed. It now asserts at least one `ParameterValue` per file and also matches `func.attr`. Each of the three launch files passes a robot description through exactly one `ParameterValue`, so "each launch file" is right today. I broke a scratch copy by replacing `publish_state_launch.py`'s wrapper with a bare `Command(...)`. Clean isolated build in `env -i`: only `test_launch_urdf_passed_as_string[publish_state_launch.py]` failed, with "publish_state_launch.py: no ParameterValue call; the URDF must be passed as one" (`test_launch_file_loads` still passes, as expected).
+- suggestion, `0813adc`'s message (`27a7570`): addressed with a comment at the top of `load_launch.py` instead of a reworded message. The comment matches what I reproduced in round 1: `SetParameter` reaches each later node as `-p name:=value` (`launch_ros` `node.py:431`, Rolling and `jazzy`), and rcl rejects the XML ("Couldn't parse parameter override rule").
+
+Other checks:
+- No code commit touches `.agent/`. I cherry-picked the nine code commits in order onto `origin/jazzy` (= `origin/rolling` = `b9edcac`) in a temporary worktree, which I then removed. All applied cleanly, and `git diff` against `3c77db7` outside `.agent/` is empty.
+- I rebuilt and retested in the package worktree: `Summary: 1 package finished`, `Summary: 16 tests, 0 errors, 0 failures, 0 skipped`.
+- Gemini and Codex both completed on the fix diff. I dropped these of their points:
+  - `rviz2` undeclared (Gemini 2, Codex 2): settled; they were given the plan's old text.
+  - `.agent/` in the range (Codex 4): settled.
+  - Hypothetical shell cases: zero-byte artifacts, a failed redirect read as exit 1, an unreadable raw file beside a readable canonical one (Gemini 3, 4; Codex 3). Xacro or C14N fails first, or the case cannot arise in this job.
+  - Comment wording (Gemini 5). Its second point is answered already: `ament_cmake_pytest` is in `ros_core`.
+  - "Test results" condition (Gemini 6): it already has `always()`.
+  - A launch-time warning in `load_launch.py` (Gemini 7): beyond a port.
+- Not verified: anything on Jazzy. The `uses:` actions and `if:` expressions were read, not run.
+
+### Findings
+- [ ] (suggestion) The `ParameterValue` check is keyed on the file, not on the parameter. It still passes if a bare `Command(...)` for `robot_description` sits beside another `ParameterValue(..., value_type=str)`. It fails a launch file added to `LAUNCH_FILES` that legitimately has no URDF, or that has a non-string `ParameterValue`; the message ("the URDF must be passed as one") at least tells that author why. Keying it on the `robot_description` value and `SetParameter(value=...)` would remove both. Neither case exists in today's three files; fine for the follow-up issue (Gemini 1, Codex 1, both rated must-fix; I rate it a suggestion) — `test/test_description.py:134-146`
