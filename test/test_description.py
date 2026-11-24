@@ -133,10 +133,14 @@ def test_launch_file_loads(name, monkeypatch):
 
 @pytest.mark.parametrize('name', LAUNCH_FILES)
 def test_launch_urdf_passed_as_string(name):
-    # Without value_type=str, launch parses the URDF as YAML and fails.
+    # Without value_type=str, launch parses the URDF as YAML and fails. Each
+    # launch file passes a robot description, so each must wrap it in a
+    # ParameterValue: a bare Command(...) in parameters is the same failure.
     tree = ast.parse((_share() / 'launch' / name).read_text())
     calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
-             and getattr(n.func, 'id', None) == 'ParameterValue']
+             and (getattr(n.func, 'id', None) == 'ParameterValue'
+                  or getattr(n.func, 'attr', None) == 'ParameterValue')]
+    assert calls, f'{name}: no ParameterValue call; the URDF must be passed as one'
     for call in calls:
         kinds = {k.arg: getattr(k.value, 'id', None) for k in call.keywords}
         assert kinds.get('value_type') == 'str', f'{name}:{call.lineno}: no value_type=str'
