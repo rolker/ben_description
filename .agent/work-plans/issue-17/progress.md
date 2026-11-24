@@ -239,3 +239,46 @@ Specialists: static analysis (xmllint `package.xml` valid; workflow YAML parses;
 - [x] (suggestion) A failure in "Processed URDF" or a transient artifact-service error in "Upload processed URDF" skips "Test", so the pytest output that would explain a xacro failure is lost; give "Test" `if: ${{ !cancelled() }}` with a condition on the build step, or move the URDF steps after "Test" with `if: always()` — `.github/workflows/ci.yml:122,220`
 - [x] (suggestion) The header says an undeclared dependency "fails here instead of being hidden by the overlay"; the test step sources `/opt/ros/<distro>` and the ros-core image already holds `ament_cmake`, `ament_cmake_pytest`, `ament_index_python`, `launch` and `launch_ros`, so only rosdep's install of the remaining keys is checked; reword the comment and say in the PR that CI does not prove the cause-11 declarations — `.github/workflows/ci.yml:7-11`
 - [x] (suggestion) `0813adc`'s message reads as a fix of `load_launch.py`; add that the file now starts but still cannot deliver the URDF to a node (`SetParameter` reaches nodes as `-p name:=<xml>`, which rcl rejects; follow-up), so the jazzy backport does not inherit a wrong impression — `launch/load_launch.py:29`
+
+## Implementation
+**Status**: complete
+**When**: 2026-11-24 09:12 -05:00
+**By**: Claude Code Agent (claude-opus-5-5)
+
+**Branch**: feature/issue-17 at `27a7570`
+**Addressed**: Local Review (Pre-Push) at `85d779e` (2026-11-24 09:07 -05:00)
+**Commits**: `24fdc60`, `a9236fb`, `70ba0f4`, `b22b7fa`, `27a7570` (code, each ending "Backport to jazzy."); `ba33ab2` (records: boxes checked)
+
+### Actions
+- [x] `compare-urdf` fails on a missing or unreadable URDF, warns only on `diff` exit 1, summary lines as a list (`24fdc60`) — `.github/workflows/ci.yml` Compare step
+- [x] `test_launch_urdf_passed_as_string` asserts at least one `ParameterValue` call per launch file and matches the attribute form (`b22b7fa`) — `test/test_description.py:134-146`
+- [x] "Test" runs whenever the build succeeded (`id: build`; `if: ${{ !cancelled() && steps.build.outcome == 'success' }}`), in both jobs (`a9236fb`) — `.github/workflows/ci.yml` Build and Test steps
+- [x] Header comment says which declarations CI really checks (`70ba0f4`) — `.github/workflows/ci.yml:5-17`
+- [x] `load_launch.py` carries a comment on its known limitation (`27a7570`) — `launch/load_launch.py:1-5`
+
+### Choices
+- Findings 1, 3 and 4 are three commits: each touches its own hunk of `ci.yml` and stands alone.
+- Finding 3: "Test" given a condition on the build step, not the URDF steps moved after "Test". It is the smaller change (two lines and an `id` per job, step order unchanged); "Test results" already had `if: always()`. A failed URDF step or upload still fails the job, since Actions fails a job on any failed step.
+
+### Checks made
+- Compare step, its `run:` block extracted from `ci.yml` and run under `bash -e` with `GITHUB_STEP_SUMMARY` set, inputs built from the installed `ben_mesh.xacro`:
+  - both present, identical: exit 0, four checksum lines, "Canonical URDFs are identical on Jazzy and Rolling."; the summary is a four-item list, a blank line, then that sentence.
+  - both present, different (lidar and pano `xyz` `-1.069` changed to `-1.0690000000000002` in Rolling's canonical file): exit 0, the diff in log and summary, `::warning title=URDF differs::...`.
+  - Jazzy's missing: exit 1, `::error title=URDF missing::urdf-jazzy/ben.urdf was not downloaded; the jazzy job did not upload its processed URDF.` (and the same for `ben.c14n.urdf`); nothing written to the summary.
+  - Rolling's missing: exit 1, the same two errors naming `urdf-rolling` and the rolling job.
+  - unreadable file (`chmod 000` on Rolling's canonical file): `diff: ...: Permission denied`, `::error title=URDF compare failed::diff exited 2.`, exit 2.
+- Test break: on a scratch copy of the install, `publish_state_launch.py`'s `ParameterValue(Command(...), value_type=str)` replaced with the bare `Command(...)`: the new test fails, "AssertionError: publish_state_launch.py: no ParameterValue call; the URDF must be passed as one" (1 failed, 2 passed); the test before this commit passes the same break (3 passed). Then `launch_ros.parameter_descriptions.ParameterValue(Command(...))` with no `value_type`: caught as "publish_state_launch.py:26: no value_type=str". The scratch copy was removed; the source was never changed.
+- `load_launch.py` with the comment: `test_launch_file_loads` and `test_launch_urdf_passed_as_string` pass (in the test run below).
+- `./build.sh --parallel-workers 4 --packages-up-to ben_description`: `Summary: 1 package finished`. `./test.sh --parallel-workers 4 --packages-select ben_description`: `15 passed`, `100% tests passed, 0 tests failed out of 1`, `Summary: 16 tests, 0 errors, 0 failures, 0 skipped`.
+- Rolling job rehearsed at `27a7570` (`git archive` into a scratch `GITHUB_WORKSPACE`, scratch `ws`, `env -i`-style environment with `ROS_DISTRO=rolling`; apt, rosdep init/update, checkout and upload not run; `rosdep install --simulate`; `if:` evaluated as Actions would): all run steps rc 0, "Processed URDF" `xacro 2.1.1`, `urdfdom 6.0.2`, `Python 3.14.4`, raw 555 lines `ef1fb08f…f7b6e`, canonical 624 lines `d893e417…56144` (unchanged), test `Summary: 16 tests, 0 errors, 0 failures, 0 skipped`. With "Processed URDF" made to fail (a nonexistent xacro file): that step rc 1, upload skipped, "Test" ran (15 passed) and "Test results" ran, job outcome failure.
+- No code commit touches `.agent/` (files per commit checked). All nine code commits (`3880ba6`, `0813adc`, `28fbda7`, `da581b7`, `24fdc60`, `a9236fb`, `70ba0f4`, `b22b7fa`, `27a7570`) cherry-pick cleanly in order onto `origin/jazzy` (`b9edcac`) in a scratch worktree (removed); the result's tree equals the branch head outside `.agent/`.
+- No build artefacts in the source tree (`git status --ignored` clean).
+- Seen in passing, not acted on: xacro 2.1.1 on a missing input file raises `AttributeError: module 'xml' has no attribute 'parsers'` from its own error path after the `XacroException`; upstream, not this package.
+
+### For the pull request text
+CI checks less of `package.xml` than it might seem: the ros-core image already contains `ament_cmake`, `ament_cmake_pytest`, `ament_index_python`, `launch` and `launch_ros`, and every step sources `/opt/ros/<distro>`, so CI cannot show those declarations are right. Only rosdep's install of the remaining keys (`xacro`, `urdfdom`, `robot_state_publisher`, `joint_state_publisher`) is really checked. `load_launch.py` now starts but cannot yet deliver the URDF to a node (global parameters reach nodes as `-p name:=<xml>`, which rcl rejects); use `publish_state_launch.py`; follow-up.
+
+### Unverified
+Nothing has run on Jazzy. The `uses:` steps and the `if:` expressions were not run by Actions; the rehearsal evaluated them by hand.
+
+Next: `/review-code --branch`
