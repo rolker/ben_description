@@ -1,3 +1,8 @@
+# Known limitation: this file starts, but its global-parameter approach cannot
+# yet deliver the URDF to a node. launch_ros passes global parameters
+# (SetParameter) to each later node as `-p name:=value`, and rcl parses that
+# value as YAML and rejects the XML. Use publish_state_launch.py instead.
+# Tracked for follow-up.
 from ament_index_python.packages import get_package_share_path
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
@@ -26,7 +31,7 @@ def generate_launch_description():
     set_robot_description = SetParameter(
         name=parameter_name,
         value=ParameterValue(
-            Command(['xacro ', str(path_to_urdf)])
+            Command(['xacro ', str(path_to_urdf)]), value_type=str
         )
     )
 

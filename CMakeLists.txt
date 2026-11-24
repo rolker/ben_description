@@ -22,6 +22,15 @@ install(DIRECTORY ${CMAKE_BINARY_DIR}/share/${PROJECT_NAME}/models DESTINATION s
 ament_environment_hooks("hooks/resource_paths.dsv.in")
 ament_environment_hooks("hooks/resource_paths.sh")
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  # The test reads the installed files, so it runs after colcon build.
+  ament_add_pytest_test(test_description test/test_description.py
+    ENV BEN_DESCRIPTION_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+    TIMEOUT 60
+  )
+endif()
+
 ament_export_dependencies(
   xacro
 )
