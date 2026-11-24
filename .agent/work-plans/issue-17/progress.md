@@ -152,3 +152,58 @@ The plan is sound in its test design, comparison and CI shape: the test exercise
 **Decision**: proceed
 
 Read: the Plan Review at `3c1ff46`, verdict needs-work, six findings. How each is applied, overriding the plan where they differ. (1) **`rviz2` is not declared.** The owner asked on 2026-11-24: "So, a robot can use the description file but not use rviz. Does an exec depend get pulled in for a build? What's the cleanest way to handle this?" It would be installed on every vehicle that installs the description (`rosdep install` takes run-time dependencies; a released package's `exec_depend`s are hard dependencies), so commit 1 declares `launch`, `launch_ros`, `ament_index_python` and the `ament_cmake` build tool only, and `package.xml` gets a short comment that `display_launch.py` needs `rviz2`, left undeclared on purpose so vehicles do not install a viewer. The follow-up list gains: move `display_launch.py` and `rviz/urdf.rviz` into an operator-side or `_viz` package that declares `rviz2`. The pull request says plainly that one used dependency is left undeclared and why. The owner was told this and may change it. (2) **`load_launch.py` is fixed in this port**, in a commit of its own: `value_type=str` on its `ParameterValue`, so the URDF is not parsed as YAML (it fails to start on both distros today; the issue's scope says "start its launch files there; fix what fails"); the same parameter in `publish_state_launch.py` is checked and treated the same way if it has the same form; the implementer starts each launch file it can on Rolling (the display one needs a display) and records the result. The alternative was the follow-up list. (3) `upload-artifact` gets a relative path, not `${{ github.workspace }}`. (4) `compare-urdf` runs when neither distro job was skipped, so it still runs after a test failure. (5) The 32-link assertion carries a message saying to update the count when a link is added or removed on purpose. (6) The plan entry's time is off by a few minutes; noted here, not corrected.
+
+## Implementation
+**Status**: complete
+**When**: 2026-11-24 09:02 -05:00
+**By**: Claude Code Agent (claude-opus-5-5)
+**Branch**: feature/issue-17 at `da581b7`
+
+Four commits, one fix each, none touching `.agent/` (each cherry-picks onto `jazzy`; `origin/jazzy` and `origin/rolling` are both at `b9edcac`, so they apply as they are). Each ends "Backport to jazzy."; 1 and 4 name rolker/unh_marine_autonomy#415.
+
+1. `3880ba6` Declare the build tool and launch dependencies the package uses — `package.xml`: `ament_cmake` buildtool; `ament_index_python`, `launch`, `launch_ros` as `exec_depend`; an XML comment that `display_launch.py` needs `rviz2`, left undeclared on purpose so vehicles do not install a viewer. `ament_xmllint`: valid.
+2. `0813adc` Pass the processed URDF from load_launch.py as a string — `value_type=str` on its `ParameterValue`. `display_launch.py` and `publish_state_launch.py` already have `value_type=str`: not changed.
+3. `28fbda7` Add a test of the installed description — `test/test_description.py`, `ament_add_pytest_test` (`ENV BEN_DESCRIPTION_INSTALL_PREFIX`, `TIMEOUT 60`), `test_depend` `ament_cmake_pytest`, `urdfdom`. 15 pytest cases: xacro, `check_urdf` root, 32 links prefixed (message: update the count when a link is added or removed on purpose), mesh files installed (each for default and `boat2`); `$(find)` paths installed; each launch file loads and declares `namespace`; plus, added, every `ParameterValue` in the launch files is `value_type=str` (AST, 9 lines, no process started). `ament_flake8`, `ament_pep257` on `test/`: no problems.
+4. `da581b7` Add CI building and testing on Jazzy and Rolling — `.github/workflows/ci.yml` as planned, with `upload-artifact` `path: ci-urdf/` (relative) and `compare-urdf` `if: ${{ !cancelled() && needs.jazzy.result != 'skipped' && needs.rolling.result != 'skipped' }}`; `set -eo pipefail` after the two `source`s. Nothing in the jobs needs `rviz2` (`rosdep keys` on the package: `ament_cmake ament_cmake_pytest ament_cmake_ros ament_index_python joint_state_publisher launch launch_ros robot_state_publisher urdfdom xacro`).
+
+### Verification (Rolling only)
+
+- Package worktree: `./build.sh --parallel-workers 4 --packages-up-to ben_description` → `Summary: 1 package finished [0.15s]`; `./test.sh --parallel-workers 4 --packages-select ben_description` → `15 passed in 0.32s`, `Summary: 16 tests, 0 errors, 0 failures, 0 skipped`.
+- Scratch workspaces, `env -i`, only `/opt/ros/rolling/setup.bash`: merged (`--merge-install`), isolated, isolated `--symlink-install`: each `Summary: 16 tests, 0 errors, 0 failures, 0 skipped`.
+- Launch files started (`ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST`, domains 161–163, each checked empty first and after), stopped with SIGINT:
+  - before commit 2: `publish_state_launch.py namespace:=boat2` (domain 161): `/boat2/robot_state_publisher` and `/boat2/joint_state_publisher` up, `robot_description` root `ben/base_link` (namespace not passed to xacro, left alone). `load_launch.py` (161): fails, "Caught exception in launch: Failed to convert '<?xml ...' using yaml rules ... line 10, column 14: Source: OnShape CAD model". `display_launch.py namespace:=boat3` (163): started on this machine's forwarded X display (`DISPLAY=localhost:11.0`); `robot_state_publisher` root `boat3/base_link`, rviz2 reports OpenGL 4.5; rviz2 needed SIGKILL to stop (launch escalated after 15 s).
+  - after commit 2: `load_launch.py` alone: rc 0, no error (it only sets a global parameter). Included from a scratch wrapper with `parameter_name:=robot_description` and a `robot_state_publisher` in `boat2` (162): the node **dies**: rcl "Couldn't parse parameter override rule: '-p robot_description:=<?xml ...'". `launch_ros` passes global parameters as `-p name:=value` (`node.py` line 431, the same on its `jazzy` branch) and rcl parses the value as YAML, so a URDF cannot reach a node through `SetParameter`. Not fixed (a redesign, not a port fix); on the follow-up list. `publish_state_launch.py` and `display_launch.py`: as before.
+- Deliberate breaks, scratch copies, clean isolated builds (failure counts include the ctest):
+  - commit 2 reverted: `test_launch_urdf_passed_as_string[load_launch.py]` — "load_launch.py:28: no value_type=str" (2 failures);
+  - mesh typo `forward_camerra.dae`: `test_mesh_files_installed[default|boat2]` — "not installed: ['package://ben_description/models/meshes/forward_camerra.dae']" (3);
+  - lidar parent `base_lnk`: `test_check_urdf_parses[default|boat2]` — "parent link [boat2/base_lnk] of joint ... not found" (3);
+  - lidar link and joint child hard-coded `ben/`: `test_links_namespaced[boat2]` only — "links not prefixed boat2/: ['ben/lidar']" (2).
+- Rolling job rehearsed: its `run:` blocks taken from `ci.yml` and run in order in `env -i` (`ROS_DISTRO=rolling` as the image sets it; apt and rosdep init/update skipped; `rosdep install` with `--simulate`: nothing to install, rc 0). Build, Processed URDF, Test, Test results all rc 0; "Processed URDF": `xacro 2.1.1`, `urdfdom 6.0.2`, `Python 3.14.4`; raw `ben.urdf` 555 lines, sha256 `ef1fb08f49fd8dc5dccec0bf8d2b1d93a16c0e8739708c541ad588b18f9f7b6e`; canonical `ben.c14n.urdf` 624 lines, sha256 `d893e417a1a3231ad7c55448fc52fc522876da0ede167634ff18157477c56144` (both as the plan found). Comparison step fed two copies: "Canonical URDFs are identical on Jazzy and Rolling."; with the lidar `xyz` altered to `-1.0690000000000002` in one copy: the diff in log and summary and `::warning title=URDF differs::...`, rc 0.
+
+### Differs from the plan or checkpoint
+
+- Commit 2 fixes the launch-level failure, but `load_launch.py` still cannot deliver a URDF to a node (global parameter via `-p`, above); the checkpoint expected the one line to make it work. Recorded and listed for follow-up.
+- The test has 15 pytest cases, not 6 (parametrized by namespace and launch file), plus the `value_type=str` check.
+- `publish_state_launch.py` did not need the fix (it already has `value_type=str`).
+
+### For the pull request
+
+- Cause 11: `ament_cmake` (build tool), `ament_index_python`, `launch`, `launch_ros` are now declared. One used dependency, `rviz2` (started by `launch/display_launch.py`), is left undeclared on purpose: a declared `exec_depend` is installed by `rosdep install` and is a hard dependency of the released package, so every vehicle that only uses the description would install a viewer. `package.xml` says so; the machine that runs the display installs `rviz2` itself.
+- The test checks the installed package: xacro processes `ben_mesh.xacro` (default and `namespace:=boat2`); urdfdom's `check_urdf` parses it with root `<namespace>/base_link`; 32 links, all namespaced; every mesh and `$(find)` path is installed; each launch file loads, declares `namespace` and passes the URDF as a string. It does not start nodes, load meshes in a renderer, or run Gazebo's URDF-to-SDF conversion.
+- URDF comparison: each job prints line count and sha256 of the raw xacro output and of an XML C14N form, uploads both, and `compare-urdf` diffs the canonical forms, warning (not failing) on a difference. It shows whether the two distros' xacro produce the same URDF text up to attribute order, comments and whitespace (any changed value, element order or text shows). It cannot tell how consumers read it on each distro (robot_state_publisher, rviz, Gazebo); each job's `check_urdf` passing is the parser evidence.
+- `load_launch.py` now starts, but cannot yet deliver the URDF to a node (follow-up).
+
+### Left alone (follow-up issue in this repository)
+
+- `publish_state_launch.py` and `load_launch.py` do not pass `namespace` to xacro (frames always `ben/...`).
+- `load_launch.py`: a URDF in a global parameter (`SetParameter`) reaches nodes as `-p name:=<xml>`, which rcl rejects; it needs a redesign or removal (no consumer in the Rolling clones uses it).
+- Lint in `launch/` (no copyright headers; 15 flake8 findings), `file (` spacing in `CMakeLists.txt`; `load_launch.py`'s unused imports.
+- `ament_cmake_ros` buildtool unused; `joint_state_publisher`, `robot_state_publisher` as `depend` where `exec_depend` would do; licence `BSD` not an SPDX name.
+- `install(DIRECTORY models)` also installs the 33 MB `BEN_shell.tar.bz2` next to the extracted mesh.
+- Move `display_launch.py` and `rviz/urdf.rviz` into an operator-side or `_viz` package that declares `rviz2`.
+
+For rolker/ben_project11#30 (host relays): its `package.xml` does not declare `ben_description`; `replay_bag.launch`, `operator_mystique.launch`, `remote_operator.launch` include `$(find ben_description)/launch/load.launch`, which does not exist; `ben_core_launch.py` includes `publish_state_launch.py`, whose `namespace` does not reach the URDF.
+
+### Unverified
+
+Nothing has run on Jazzy (Ubuntu 26.04 here, no Jazzy, no Docker): strict rosdep on noble, the build, the test, `check_urdf` from urdfdom 4.0.2 and Python 3.12. The pull request's first CI run is the first Jazzy evidence, this repository's first CI run, and the first comparison of the two distros' URDFs. The `uses:` steps (checkout, upload, download) and the `if:` expressions were not run locally.
