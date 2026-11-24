@@ -20,7 +20,8 @@
 # compare-urdf diffs the two canonical forms; a difference is a warning to
 # explain, not a failure. It runs when neither distro job was skipped, so it
 # also runs after a test failure, and it is skipped on jazzy, like the
-# rolling job.
+# rolling job. "Test" runs whenever the build succeeded, even after a failed
+# URDF step or upload; any failed step still fails the job.
 #
 # Job "rolling" is skipped for pull requests to and pushes on jazzy
 # (github.base_ref is the target branch of a pull request; github.ref_name is
@@ -82,6 +83,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive rosdep install --ignore-src -y --from-paths $paths
 
       - name: Build
+        id: build
         working-directory: ../ws
         run: >
           bash -c 'source /opt/ros/jazzy/setup.bash &&
@@ -120,6 +122,8 @@ jobs:
           if-no-files-found: error
 
       - name: Test
+        # Also after a failed URDF step or upload; the test output shows why.
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         working-directory: ../ws
         run: >
           bash -c 'source /opt/ros/jazzy/setup.bash &&
@@ -180,6 +184,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive rosdep install --ignore-src -y --from-paths $paths
 
       - name: Build
+        id: build
         working-directory: ../ws
         run: >
           bash -c 'source /opt/ros/rolling/setup.bash &&
@@ -218,6 +223,8 @@ jobs:
           if-no-files-found: error
 
       - name: Test
+        # Also after a failed URDF step or upload; the test output shows why.
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         working-directory: ../ws
         run: >
           bash -c 'source /opt/ros/rolling/setup.bash &&
