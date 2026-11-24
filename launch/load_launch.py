@@ -26,7 +26,7 @@ def generate_launch_description():
     set_robot_description = SetParameter(
         name=parameter_name,
         value=ParameterValue(
-            Command(['xacro ', str(path_to_urdf)])
+            Command(['xacro ', str(path_to_urdf)]), value_type=str
         )
     )
 
